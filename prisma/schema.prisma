@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+model User {
+  id        String   @id @default(uuid())
+  name      String?
+  mobile    String   @unique
+  role      Role     @default(TENANT)
+  createdAt DateTime @default(now())
+
+  tenant    Tenant?
+}
+
+model PG {
+  id          String   @id @default(uuid())
+  name        String
+  location    String
+  description String?
+  createdAt   DateTime @default(now())
+
+  rooms       Room[]
+}
+
+model Room {
+  id       String @id @default(uuid())
+  pgId     String
+  type     String
+  price    Int
+  status   RoomStatus @default(VACANT)
+
+  pg       PG @relation(fields: [pgId], references: [id])
+}
+
+model Tenant {
+  id         String @id @default(uuid())
+  userId     String @unique
+  pgId       String
+  roomId     String
+  rentAmount Int
+  rentStatus RentStatus @default(PENDING)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  tenantId  String
+  amount    Int
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model Inquiry {
+  id      String @id @default(uuid())
+  name    String
+  phone   String
+  message String?
+  pgId    String
+}
+
+enum Role {
+  ADMIN
+  TENANT
+}
+
+enum RoomStatus {
+  VACANT
+  OCCUPIED
+}
+
+enum RentStatus {
+  PAID
+  PENDING
+}
