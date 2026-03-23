@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Home, Building2, Phone, Menu, X, UserCircle } from 'lucide-react';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -28,7 +30,7 @@ const Header = () => {
           <nav className="hidden md:flex space-x-8">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = pathname === item.path;
               return (
                 <Link
                   key={item.path}
@@ -64,7 +66,7 @@ const Header = () => {
           <nav className="md:hidden py-4 border-t">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = pathname === item.path;
               return (
                 <Link
                   key={item.path}

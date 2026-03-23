@@ -15,8 +15,14 @@ import {
 import { benefits } from '../data/roomsData';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { Hero } from '../sections/Hero';
+import { HeroSection } from '../../lib/sanity/queries/heroSection';
 
-export function Home() {
+interface HomeProps {
+  heroData: HeroSection | null;
+}
+
+export function Home({ heroData }: HomeProps) {
   const iconMap: Record<string, React.ElementType> = {
     Utensils,
     Wifi,
@@ -45,67 +51,8 @@ export function Home() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center space-x-2 bg-blue-500 bg-opacity-30 px-4 py-2 rounded-full mb-6">
-                <Star className="h-4 w-4 text-yellow-300 fill-yellow-300" />
-                <span className="text-sm">Rated 4.8/5 by 500+ residents</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Your Perfect Home Away From Home
-              </h1>
-              <p className="text-lg text-blue-100 mb-8">
-                Comfortable, secure, and affordable PG accommodation for
-                students and working professionals in the heart of the city.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link href="/rooms">
-                  <Button
-                    size="lg"
-                    className="bg-white text-blue-600 hover:bg-gray-100"
-                  >
-                    View Rooms
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/contact">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-blue-600"
-                  >
-                    Contact Us
-                  </Button>
-                </Link>
-              </div>
-              <div className="mt-12 grid grid-cols-3 gap-6">
-                <div>
-                  <div className="text-3xl font-bold">500+</div>
-                  <div className="text-blue-200">Happy Residents</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">50+</div>
-                  <div className="text-blue-200">Rooms Available</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold">24/7</div>
-                  <div className="text-blue-200">Support</div>
-                </div>
-              </div>
-            </div>
-            <div className="hidden md:block">
-              <img
-                src="https://images.unsplash.com/photo-1721743169043-dda0212ce3d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBzaW5nbGUlMjBiZWRyb29tJTIwYWNjb21tb2RhdGlvbnxlbnwxfHx8fDE3NzM3NTQ4OTV8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Modern PG Room"
-                className="rounded-lg shadow-2xl"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Dynamic Hero Section */}
+      <Hero heroData={heroData} />
 
       {/* Benefits Section */}
       <section className="py-16 bg-white">
