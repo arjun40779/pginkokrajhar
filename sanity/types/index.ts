@@ -13,6 +13,7 @@ export * from './HeaderSection.types';
 export * from './FooterSection.types';
 export * from './LayoutSection.types';
 export * from './PageSection.types';
+export * from './ContactSection.types';
 
 // Re-export commonly used types for convenience
 export type {
@@ -37,3 +38,4 @@ export type {
   ImageRatio,
   CachePolicy,
 } from './Enums.types';
+

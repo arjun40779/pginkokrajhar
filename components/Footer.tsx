@@ -1,4 +1,3 @@
-'use client';
 import { FooterSection } from '@/sanity/types';
 import { Building2 } from 'lucide-react';
 import Link from 'next/link';

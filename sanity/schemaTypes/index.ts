@@ -6,6 +6,7 @@ import { footerSection } from './document/footerSection';
 import { headerSection } from './document/headerSection';
 import { layoutSection } from './document/layoutSection';
 import { pageSection } from './document/pageSection';
+import { contactSection } from './document/contactSection';
 
 export const schemaTypes = [
   // Document types
@@ -17,6 +18,7 @@ export const schemaTypes = [
   headerSection,
   layoutSection,
   pageSection,
+  contactSection,
   // Object types
 ];
 
