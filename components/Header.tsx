@@ -1,93 +1,172 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Home, Building2, Phone, Menu, X, UserCircle } from 'lucide-react';
+import {
+  Home,
+  Building2,
+  Phone,
+  Menu,
+  X,
+  UserCircle,
+  Building,
+  Hotel,
+  MapPin,
+  Star,
+  Mail,
+  Calendar,
+  Settings,
+  Info,
+  CreditCard,
+  MoreHorizontal,
+  Grid3X3,
+  XCircle,
+  Minus,
+} from 'lucide-react';
+import { HeaderSection } from '@/sanity/types';
 
-const Header = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+interface HeaderProps {
+  headerData?: HeaderSection | null;
+}
+
+const Header: React.FC<HeaderProps> = ({ headerData }) => {
   const pathname = usePathname();
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: Home },
-    { path: '/rooms', label: 'Rooms', icon: Building2 },
-    { path: '/resident-portal', label: 'Resident Portal', icon: UserCircle },
-    { path: '/contact', label: 'Contact', icon: Phone },
-  ];
+  // Icon mapping for dynamic icons
+  const iconMap: Record<string, React.ElementType> = {
+    Home,
+    Building2,
+    Building,
+    Phone,
+    UserCircle,
+    Hotel,
+    MapPin,
+    Star,
+    Mail,
+    Calendar,
+    Settings,
+    Info,
+    CreditCard,
+    Menu,
+    X,
+    MoreHorizontal,
+    Grid3X3,
+    XCircle,
+    Minus,
+  };
+
+  // Use Sanity data or fallback
+  const data = headerData;
+  console.log(data);
+
+  // Find contact item for mobile top-right placement
+  const contactItem = data?.navigation?.find(
+    (item) =>
+      item.url?.toLowerCase().includes('/contact') ||
+      item.label?.toLowerCase().includes('contact'),
+  );
+
+  // Filter out contact item from bottom navigation
+  const bottomNavItems = data?.navigation
+    ?.filter(
+      (item) =>
+        !item.url?.toLowerCase().includes('/contact') &&
+        !item.label?.toLowerCase().includes('contact'),
+    )
+    .slice(0, 4); // Limit to 4 items to keep layout balanced
+
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <Building2 className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-semibold text-gray-900">
-              ComfortStay PG
-            </span>
-          </Link>
+    <>
+      {/* Desktop Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-2">
+              <Building2 className="h-8 w-8 text-blue-600" />
+              <span className="text-xl font-semibold text-gray-900">
+                ComfortStay PG
+              </span>
+            </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.path;
-              return (
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex space-x-8">
+              {data?.navigation?.map((item) => {
+                const Icon = iconMap[item.icon] || MoreHorizontal; // Fallback to MoreHorizontal
+                const isActive = pathname === item.url;
+                return (
+                  <Link
+                    key={item.url}
+                    href={item.url}
+                    className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors ${
+                      isActive
+                        ? 'text-blue-600 bg-blue-50'
+                        : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Mobile Contact Button - Top Right */}
+            {contactItem && (
+              <div className="md:hidden">
                 <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors ${
-                    isActive
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  href={contactItem.url}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 border-2 shadow-sm ${
+                    pathname === contactItem.url
+                      ? 'text-white bg-blue-600 border-blue-600 shadow-md'
+                      : 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 active:bg-blue-200 active:scale-95'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  {(() => {
+                    const Icon = iconMap[contactItem.icon] || MoreHorizontal;
+                    return <Icon className="h-4 w-4" />;
+                  })()}
+                  <span className="text-sm font-medium">
+                    {contactItem.label}
+                  </span>
                 </Link>
-              );
-            })}
-          </nav>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
+              </div>
             )}
-          </button>
+          </div>
         </div>
+      </header>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  // onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center space-x-2 px-3 py-3 rounded-md transition-colors ${
-                    isActive
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                  }`}
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+        <div className="flex h-16">
+          {bottomNavItems?.map((item) => {
+            const Icon = iconMap[item.icon] || MoreHorizontal; // Fallback to MoreHorizontal
+            const isActive = pathname === item.url;
+            return (
+              <Link
+                key={item.url}
+                href={item.url}
+                className={`flex-1 flex flex-col items-center justify-center py-2 px-1 transition-all duration-200 ${
+                  isActive
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50 active:bg-gray-100'
+                }`}
+              >
+                <Icon
+                  className={`h-6 w-6 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}
+                />
+                <span
+                  className={`text-xs mt-1 text-center leading-tight ${isActive ? 'font-medium' : 'font-normal'}`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        )}
-      </div>
-    </header>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 };
+
 export default Header;
 

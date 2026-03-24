@@ -2,8 +2,8 @@ import { Star, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../ui/button';
-import { HeroSection, getImageUrl } from '../../lib/sanity/queries/heroSection';
 import { cn } from '../ui/utils';
+import { HeroSection } from '@/sanity/types';
 
 interface HeroProps {
   heroData: HeroSection | null;
@@ -11,14 +11,14 @@ interface HeroProps {
 
 export function Hero({ heroData }: HeroProps) {
   // Fallback data if no Sanity content is available
-
+  console.log(heroData, '----------->>>>>heroData<<<<<<<<<<');
   return (
     <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white flex justify-center items-center ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
-            {heroData?.badge?.show ? (
-              <div className="inline-flex items-center space-x-2 bg-blue-500 bg-opacity-30 px-4 py-2 rounded-full mb-6">
+            {heroData?.badge ? (
+              <div className="inline-flex items-center space-x-2 bg-blue-400 bg-opacity-30 px-4 py-2 rounded-full mb-6">
                 <Star className="h-4 w-4 text-yellow-300 fill-yellow-300" />
                 <span className="text-sm">{heroData.badge.text}</span>
               </div>
@@ -84,11 +84,16 @@ export function Hero({ heroData }: HeroProps) {
           <div className="hidden md:block">
             {heroData?.heroImage ? (
               <Image
-                src={getImageUrl(heroData.heroImage)}
+                src={heroData?.heroImage?.asset?.url || ''}
                 alt="Modern PG Room"
                 className="rounded-lg shadow-2xl"
-                width={heroData.heroImage.asset.metadata.dimensions.width}
-                height={heroData.heroImage.asset.metadata.dimensions.height}
+                width={
+                  heroData?.heroImage?.asset?.metadata?.dimensions?.width || 800
+                }
+                height={
+                  heroData?.heroImage?.asset?.metadata?.dimensions?.height ||
+                  600
+                }
               />
             ) : (
               <img

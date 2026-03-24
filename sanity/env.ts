@@ -11,10 +11,6 @@ export const projectId = assertValue(
   'Missing environment variable: NEXT_PUBLIC_SANITY_PROJECT_ID',
 );
 
-console.log('Sanity environment variables:');
-console.log('NEXT_PUBLIC_SANITY_API_VERSION:', apiVersion);
-console.log('NEXT_PUBLIC_SANITY_DATASET:', dataset);
-console.log('NEXT_PUBLIC_SANITY_PROJECT_ID:', projectId);
 function assertValue<T>(v: T | undefined, errorMessage: string): T {
   if (v === undefined) {
     throw new Error(errorMessage);

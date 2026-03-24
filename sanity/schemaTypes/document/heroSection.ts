@@ -14,6 +14,14 @@ export const heroSection = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'isActive',
+      title: 'Is Active',
+      type: 'boolean',
+      description: 'Toggle this section on/off',
+      initialValue: true,
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
       name: 'badge',
       title: 'Badge',
       type: 'object',
@@ -162,22 +170,6 @@ export const heroSection = defineType({
         },
       ],
       validation: (rule) => rule.max(4),
-    }),
-    defineField({
-      name: 'backgroundColor',
-      title: 'Background Color',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Blue Gradient', value: 'blue-gradient' },
-          { title: 'Purple Gradient', value: 'purple-gradient' },
-          { title: 'Green Gradient', value: 'green-gradient' },
-          { title: 'Orange Gradient', value: 'orange-gradient' },
-          { title: 'White', value: 'white' },
-          { title: 'Light Gray', value: 'gray-light' },
-        ],
-      },
-      initialValue: 'blue-gradient',
     }),
   ],
   preview: {

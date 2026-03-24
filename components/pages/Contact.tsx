@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import {
   Card,
@@ -15,6 +15,7 @@ import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function Contact() {
+  const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,6 +23,50 @@ export function Contact() {
     subject: '',
     message: '',
   });
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Show loading skeleton during SSR and initial hydration
+  if (!isClient) {
+    return (
+      <div className="py-8 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="h-10 w-64 bg-gray-200 rounded mx-auto mb-4 animate-pulse"></div>
+            <div className="h-6 w-96 bg-gray-200 rounded mx-auto animate-pulse"></div>
+          </div>
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg p-6">
+                <div className="h-6 w-48 bg-gray-200 rounded mb-4 animate-pulse"></div>
+                <div className="space-y-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-10 bg-gray-200 rounded animate-pulse"
+                    ></div>
+                  ))}
+                  <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg p-6 mb-4">
+                  <div className="h-5 w-20 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded mb-1 animate-pulse"></div>
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

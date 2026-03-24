@@ -160,7 +160,6 @@ export default function VerifyPage() {
             '6LctBpAsAAAAAKZqoO0aFZWx4g9IpOnMRmfGuY40',
             { action: 'RESEND_OTP' },
           );
-          console.log('reCAPTCHA token for resend:', recaptchaToken);
         } catch (recaptchaError) {
           console.warn('reCAPTCHA failed:', recaptchaError);
           // Continue without reCAPTCHA if it fails

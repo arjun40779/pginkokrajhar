@@ -67,7 +67,6 @@ export default function RegisterPage() {
             '6LctBpAsAAAAAKZqoO0aFZWx4g9IpOnMRmfGuY40',
             { action: 'SIGNUP' },
           );
-          console.log('reCAPTCHA token:', recaptchaToken);
         } catch (recaptchaError) {
           console.warn('reCAPTCHA failed:', recaptchaError);
           // Continue without reCAPTCHA if it fails

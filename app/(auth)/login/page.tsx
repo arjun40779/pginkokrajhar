@@ -41,7 +41,6 @@ export default function LoginPage() {
             '6LctBpAsAAAAAKZqoO0aFZWx4g9IpOnMRmfGuY40',
             { action: 'LOGIN' },
           );
-          console.log('reCAPTCHA token:', recaptchaToken);
         } catch (recaptchaError) {
           console.warn('reCAPTCHA failed:', recaptchaError);
           // Continue without reCAPTCHA if it fails

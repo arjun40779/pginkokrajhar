@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { rooms } from '../data/roomsData';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 export function Rooms() {
+  const [isClient, setIsClient] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [inquiryDialog, setInquiryDialog] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
@@ -27,6 +28,49 @@ export function Rooms() {
     phone: '',
     message: '',
   });
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Show loading skeleton during SSR and initial hydration
+  if (!isClient) {
+    return (
+      <div className="py-8 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <div className="h-10 w-80 bg-gray-200 rounded mx-auto mb-4 animate-pulse"></div>
+            <div className="h-6 w-96 bg-gray-200 rounded mx-auto animate-pulse"></div>
+          </div>
+          <div className="flex flex-wrap gap-3 justify-center mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-10 w-24 bg-gray-200 rounded animate-pulse"
+              ></div>
+            ))}
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-lg shadow-md overflow-hidden"
+              >
+                <div className="h-48 bg-gray-200 animate-pulse"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filteredRooms =
     filterType === 'all'

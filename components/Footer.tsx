@@ -1,8 +1,13 @@
 'use client';
+import { FooterSection } from '@/sanity/types';
 import { Building2 } from 'lucide-react';
 import Link from 'next/link';
 
-const Footer = () => {
+interface FooterProps {
+  footerData?: FooterSection | null;
+}
+
+const Footer: React.FC<FooterProps> = ({ footerData }) => {
   return (
     <footer className="bg-gray-900 text-white mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -13,54 +18,46 @@ const Footer = () => {
               <span className="text-lg font-semibold">ComfortStay PG</span>
             </div>
             <p className="text-gray-400">
-              Your home away from home. Comfortable, secure, and affordable
-              accommodation for students and professionals.
+              {footerData?.brandSection?.description}
             </p>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
+            <h3 className="font-semibold mb-4">
+              {footerData?.quickLinks?.title}
+            </h3>
             <ul className="space-y-2">
-              <li>
-                <Link
-                  href="/"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/rooms"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Rooms & Pricing
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  Contact Us
-                </Link>
-              </li>
+              {footerData?.quickLinks?.links?.map((link) => {
+                return (
+                  <li key={link?.label}>
+                    <Link
+                      href={link.url}
+                      className="flex items-center text-gray-400 hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">Contact Info</h3>
+            <h3 className="font-semibold mb-4">
+              {footerData?.contactInfo?.title}
+            </h3>
             <ul className="space-y-2 text-gray-400">
-              <li>📞 +91 98765 43210</li>
-              <li>📧 info@comfortstay.com</li>
-              <li>📍 123 MG Road, Bangalore - 560001</li>
+              <li>📞 {footerData?.contactInfo?.phone}</li>
+              <li>📧 {footerData?.contactInfo?.email}</li>
+              <li>📍 {footerData?.contactInfo?.address}</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2026 ComfortStay PG. All rights reserved.</p>
+          <p>{footerData?.copyrightText}</p>
         </div>
       </div>
     </footer>
   );
 };
+
 export default Footer;
 

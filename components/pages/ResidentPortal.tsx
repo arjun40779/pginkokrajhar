@@ -1,25 +1,67 @@
-"use client"
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Separator } from "../ui/separator";
-import { Badge } from "../ui/badge";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { 
-  IndianRupee, 
-  CreditCard, 
-  Calendar, 
-  CheckCircle, 
+'use client';
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../ui/Card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { Badge } from '../ui/badge';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import {
+  IndianRupee,
+  CreditCard,
+  Calendar,
+  CheckCircle,
   Building2,
   Phone,
   Hash,
   AlertCircle,
   Clock,
-  Repeat
-} from "lucide-react";
-import { toast } from "sonner";
+  Repeat,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+// Safe date formatting to prevent hydration errors
+const formatDate = (dateString: string) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+// Safe Date Component to prevent hydration issues
+const SafeDate = ({
+  dateString,
+  className,
+}: {
+  dateString: string;
+  className?: string;
+}) => {
+  const [formattedDate, setFormattedDate] = useState('');
+
+  useEffect(() => {
+    setFormattedDate(formatDate(dateString));
+  }, [dateString]);
+
+  return (
+    <span className={className} suppressHydrationWarning>
+      {formattedDate}
+    </span>
+  );
+};
 
 interface ResidentData {
   roomNumber: string;
@@ -27,82 +69,86 @@ interface ResidentData {
   phone: string;
   rentAmount: number;
   dueDate: string;
-  status: "paid" | "due" | "overdue";
+  status: 'paid' | 'due' | 'overdue';
   autoPayEnabled: boolean;
 }
 
 export function ResidentPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginData, setLoginData] = useState({
-    roomNumber: "",
-    phone: ""
+    roomNumber: '',
+    phone: '',
   });
   const [residentData, setResidentData] = useState<ResidentData | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "upi" | "netbanking">("card");
+  const [paymentMethod, setPaymentMethod] = useState<
+    'card' | 'upi' | 'netbanking'
+  >('card');
   const [paymentData, setPaymentData] = useState({
-    cardNumber: "",
-    expiry: "",
-    cvv: "",
-    upiId: ""
+    cardNumber: '',
+    expiry: '',
+    cvv: '',
+    upiId: '',
   });
   const [showAutopaySetup, setShowAutopaySetup] = useState(false);
-  const [autopayMethod, setAutopayMethod] = useState<"card" | "upi">("card");
+  const [autopayMethod, setAutopayMethod] = useState<'card' | 'upi'>('card');
   const [autopayData, setAutopayData] = useState({
-    cardNumber: "",
-    expiry: "",
-    cvv: "",
-    upiId: ""
+    cardNumber: '',
+    expiry: '',
+    cvv: '',
+    upiId: '',
   });
 
   // Mock login - in real app, this would verify with backend
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Simulate authentication
     if (loginData.roomNumber && loginData.phone.length === 10) {
       // Mock resident data
       const mockResident: ResidentData = {
         roomNumber: loginData.roomNumber,
-        name: "John Doe",
+        name: 'John Doe',
         phone: loginData.phone,
         rentAmount: 8000,
-        dueDate: "2026-03-25",
-        status: "due",
-        autoPayEnabled: false
+        dueDate: '2026-03-25',
+        status: 'due',
+        autoPayEnabled: false,
       };
-      
+
       setResidentData(mockResident);
       setIsLoggedIn(true);
-      toast.success("Login successful!");
+      toast.success('Login successful!');
     } else {
-      toast.error("Invalid credentials. Please check your details.");
+      toast.error('Invalid credentials. Please check your details.');
     }
   };
 
   const handlePayRent = (e: React.FormEvent) => {
     e.preventDefault();
     // In real app, process payment through gateway
-    toast.success("Rent payment successful! Receipt sent to your email.");
-    
+    toast.success('Rent payment successful! Receipt sent to your email.');
+
     if (residentData) {
       setResidentData({
         ...residentData,
-        status: "paid",
-        dueDate: "2026-04-25"
+        status: 'paid',
+        dueDate: '2026-04-25',
       });
     }
   };
 
   const handleSetupAutopay = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (residentData) {
       setResidentData({
         ...residentData,
-        autoPayEnabled: true
+        autoPayEnabled: true,
       });
       setShowAutopaySetup(false);
-      toast.success("AutoPay setup successful! Your rent will be automatically deducted on the 25th of each month.");
+      toast.success(
+        'AutoPay setup successful! Your rent will be automatically deducted on the 25th of each month.',
+      );
     }
   };
 
@@ -110,9 +156,9 @@ export function ResidentPortal() {
     if (residentData) {
       setResidentData({
         ...residentData,
-        autoPayEnabled: false
+        autoPayEnabled: false,
       });
-      toast.success("AutoPay disabled successfully.");
+      toast.success('AutoPay disabled successfully.');
     }
   };
 
@@ -140,7 +186,9 @@ export function ResidentPortal() {
                     id="roomNumber"
                     required
                     value={loginData.roomNumber}
-                    onChange={(e) => setLoginData({ ...loginData, roomNumber: e.target.value })}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, roomNumber: e.target.value })
+                    }
                     placeholder="101"
                     className="pl-10"
                   />
@@ -156,7 +204,12 @@ export function ResidentPortal() {
                     required
                     maxLength={10}
                     value={loginData.phone}
-                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value.replace(/\D/g, '') })}
+                    onChange={(e) =>
+                      setLoginData({
+                        ...loginData,
+                        phone: e.target.value.replace(/\D/g, ''),
+                      })
+                    }
                     placeholder="9876543210"
                     className="pl-10"
                   />
@@ -166,7 +219,10 @@ export function ResidentPortal() {
                 Login to Portal
               </Button>
               <p className="text-xs text-center text-gray-500">
-                For new bookings, please visit the <a href="/rooms" className="text-blue-600 hover:underline">Rooms page</a>
+                For new bookings, please visit the{' '}
+                <a href="/rooms" className="text-blue-600 hover:underline">
+                  Rooms page
+                </a>
               </p>
             </form>
           </CardContent>
@@ -183,8 +239,12 @@ export function ResidentPortal() {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Welcome back, {residentData?.name}!</h1>
-              <p className="text-gray-600 mt-1">Room #{residentData?.roomNumber}</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Welcome back, {residentData?.name}!
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Room #{residentData?.roomNumber}
+              </p>
             </div>
             <Button variant="outline" onClick={() => setIsLoggedIn(false)}>
               Logout
@@ -202,25 +262,25 @@ export function ResidentPortal() {
                   <CardTitle>Current Rent Status</CardTitle>
                   <Badge
                     variant={
-                      residentData?.status === "paid"
-                        ? "default"
-                        : residentData?.status === "overdue"
-                        ? "destructive"
-                        : "secondary"
+                      residentData?.status === 'paid'
+                        ? 'default'
+                        : residentData?.status === 'overdue'
+                          ? 'destructive'
+                          : 'secondary'
                     }
                     className={
-                      residentData?.status === "paid"
-                        ? "bg-green-100 text-green-700"
-                        : residentData?.status === "due"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : ""
+                      residentData?.status === 'paid'
+                        ? 'bg-green-100 text-green-700'
+                        : residentData?.status === 'due'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : ''
                     }
                   >
-                    {residentData?.status === "paid"
-                      ? "Paid"
-                      : residentData?.status === "overdue"
-                      ? "Overdue"
-                      : "Due"}
+                    {residentData?.status === 'paid'
+                      ? 'Paid'
+                      : residentData?.status === 'overdue'
+                        ? 'Overdue'
+                        : 'Due'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -235,26 +295,28 @@ export function ResidentPortal() {
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">
-                      {residentData?.status === "paid" ? "Next Due Date" : "Due Date"}
+                      {residentData?.status === 'paid'
+                        ? 'Next Due Date'
+                        : 'Due Date'}
                     </p>
                     <div className="flex items-center text-lg font-semibold">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(residentData?.dueDate || "").toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric"
-                      })}
+                      <SafeDate dateString={residentData?.dueDate || ''} />
                     </div>
                   </div>
                 </div>
 
-                {residentData?.status === "paid" ? (
+                {residentData?.status === 'paid' ? (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start space-x-3">
                     <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-green-900">Rent Paid Successfully</p>
+                      <p className="font-semibold text-green-900">
+                        Rent Paid Successfully
+                      </p>
                       <p className="text-sm text-green-700 mt-1">
-                        Your rent for this month has been paid. Next payment due on {new Date(residentData?.dueDate || "").toLocaleDateString("en-IN")}.
+                        Your rent for this month has been paid. Next payment due
+                        on <SafeDate dateString={residentData?.dueDate || ''} />
+                        .
                       </p>
                     </div>
                   </div>
@@ -262,9 +324,12 @@ export function ResidentPortal() {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3">
                     <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-yellow-900">Payment Due</p>
+                      <p className="font-semibold text-yellow-900">
+                        Payment Due
+                      </p>
                       <p className="text-sm text-yellow-700 mt-1">
-                        Please pay your rent before the due date to avoid late fees.
+                        Please pay your rent before the due date to avoid late
+                        fees.
                       </p>
                     </div>
                   </div>
@@ -273,7 +338,7 @@ export function ResidentPortal() {
             </Card>
 
             {/* Payment Form */}
-            {residentData?.status !== "paid" && (
+            {residentData?.status !== 'paid' && (
               <Card>
                 <CardHeader>
                   <CardTitle>Pay Monthly Rent</CardTitle>
@@ -285,25 +350,42 @@ export function ResidentPortal() {
                   <form onSubmit={handlePayRent} className="space-y-6">
                     {/* Payment Method Selection */}
                     <div>
-                      <Label className="mb-3 block">Select Payment Method</Label>
-                      <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                      <Label className="mb-3 block">
+                        Select Payment Method
+                      </Label>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(value: any) => setPaymentMethod(value)}
+                      >
                         <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
                           <RadioGroupItem value="card" id="rent-card" />
-                          <Label htmlFor="rent-card" className="flex-1 cursor-pointer flex items-center">
+                          <Label
+                            htmlFor="rent-card"
+                            className="flex-1 cursor-pointer flex items-center"
+                          >
                             <CreditCard className="h-4 w-4 mr-2" />
                             Credit / Debit Card
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
                           <RadioGroupItem value="upi" id="rent-upi" />
-                          <Label htmlFor="rent-upi" className="flex-1 cursor-pointer flex items-center">
+                          <Label
+                            htmlFor="rent-upi"
+                            className="flex-1 cursor-pointer flex items-center"
+                          >
                             <Building2 className="h-4 w-4 mr-2" />
                             UPI
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
-                          <RadioGroupItem value="netbanking" id="rent-netbanking" />
-                          <Label htmlFor="rent-netbanking" className="flex-1 cursor-pointer flex items-center">
+                          <RadioGroupItem
+                            value="netbanking"
+                            id="rent-netbanking"
+                          />
+                          <Label
+                            htmlFor="rent-netbanking"
+                            className="flex-1 cursor-pointer flex items-center"
+                          >
                             <Building2 className="h-4 w-4 mr-2" />
                             Net Banking
                           </Label>
@@ -311,15 +393,22 @@ export function ResidentPortal() {
                       </RadioGroup>
 
                       {/* Card Details */}
-                      {paymentMethod === "card" && (
+                      {paymentMethod === 'card' && (
                         <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <Label htmlFor="rentCardNumber">Card Number *</Label>
+                            <Label htmlFor="rentCardNumber">
+                              Card Number *
+                            </Label>
                             <Input
                               id="rentCardNumber"
                               required
                               value={paymentData.cardNumber}
-                              onChange={(e) => setPaymentData({ ...paymentData, cardNumber: e.target.value })}
+                              onChange={(e) =>
+                                setPaymentData({
+                                  ...paymentData,
+                                  cardNumber: e.target.value,
+                                })
+                              }
                               placeholder="1234 5678 9012 3456"
                               maxLength={19}
                             />
@@ -331,7 +420,12 @@ export function ResidentPortal() {
                                 id="rentExpiry"
                                 required
                                 value={paymentData.expiry}
-                                onChange={(e) => setPaymentData({ ...paymentData, expiry: e.target.value })}
+                                onChange={(e) =>
+                                  setPaymentData({
+                                    ...paymentData,
+                                    expiry: e.target.value,
+                                  })
+                                }
                                 placeholder="MM/YY"
                                 maxLength={5}
                               />
@@ -342,7 +436,12 @@ export function ResidentPortal() {
                                 id="rentCvv"
                                 required
                                 value={paymentData.cvv}
-                                onChange={(e) => setPaymentData({ ...paymentData, cvv: e.target.value })}
+                                onChange={(e) =>
+                                  setPaymentData({
+                                    ...paymentData,
+                                    cvv: e.target.value,
+                                  })
+                                }
                                 placeholder="123"
                                 maxLength={3}
                                 type="password"
@@ -353,24 +452,30 @@ export function ResidentPortal() {
                       )}
 
                       {/* UPI Details */}
-                      {paymentMethod === "upi" && (
+                      {paymentMethod === 'upi' && (
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                           <Label htmlFor="rentUpiId">UPI ID *</Label>
                           <Input
                             id="rentUpiId"
                             required
                             value={paymentData.upiId}
-                            onChange={(e) => setPaymentData({ ...paymentData, upiId: e.target.value })}
+                            onChange={(e) =>
+                              setPaymentData({
+                                ...paymentData,
+                                upiId: e.target.value,
+                              })
+                            }
                             placeholder="yourname@upi"
                           />
                         </div>
                       )}
 
                       {/* Net Banking */}
-                      {paymentMethod === "netbanking" && (
+                      {paymentMethod === 'netbanking' && (
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                           <p className="text-sm text-gray-600">
-                            You will be redirected to your bank's website to complete the payment.
+                            You will be redirected to your bank's website to
+                            complete the payment.
                           </p>
                         </div>
                       )}
@@ -406,8 +511,12 @@ export function ResidentPortal() {
                     <Repeat className="h-5 w-5 mr-2" />
                     AutoPay
                   </CardTitle>
-                  <Badge variant={residentData?.autoPayEnabled ? "default" : "secondary"}>
-                    {residentData?.autoPayEnabled ? "Active" : "Inactive"}
+                  <Badge
+                    variant={
+                      residentData?.autoPayEnabled ? 'default' : 'secondary'
+                    }
+                  >
+                    {residentData?.autoPayEnabled ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -418,9 +527,12 @@ export function ResidentPortal() {
                       <div className="flex items-start space-x-3">
                         <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-semibold text-green-900">AutoPay Enabled</p>
+                          <p className="font-semibold text-green-900">
+                            AutoPay Enabled
+                          </p>
                           <p className="text-sm text-green-700 mt-1">
-                            Your rent will be automatically deducted on the 25th of each month.
+                            Your rent will be automatically deducted on the 25th
+                            of each month.
                           </p>
                         </div>
                       </div>
@@ -428,31 +540,44 @@ export function ResidentPortal() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Amount:</span>
-                        <span className="font-semibold">₹{residentData?.rentAmount.toLocaleString()}/month</span>
+                        <span className="font-semibold">
+                          ₹{residentData?.rentAmount.toLocaleString()}/month
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Next Deduction:</span>
-                        <span className="font-semibold">25th of every month</span>
+                        <span className="font-semibold">
+                          25th of every month
+                        </span>
                       </div>
                     </div>
-                    <Button variant="destructive" className="w-full" onClick={handleDisableAutopay}>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleDisableAutopay}
+                    >
                       Disable AutoPay
                     </Button>
                   </>
                 ) : (
                   <>
                     <p className="text-sm text-gray-600">
-                      Set up AutoPay to automatically pay your rent every month without missing due dates.
+                      Set up AutoPay to automatically pay your rent every month
+                      without missing due dates.
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <div className="flex items-start space-x-2">
                         <Clock className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-blue-800">
-                          AutoPay will deduct rent on the 25th of each month automatically.
+                          AutoPay will deduct rent on the 25th of each month
+                          automatically.
                         </p>
                       </div>
                     </div>
-                    <Button className="w-full" onClick={() => setShowAutopaySetup(true)}>
+                    <Button
+                      className="w-full"
+                      onClick={() => setShowAutopaySetup(true)}
+                    >
                       Setup AutoPay
                     </Button>
                   </>
@@ -468,13 +593,16 @@ export function ResidentPortal() {
               <CardContent>
                 <ul className="space-y-3">
                   {[
-                    "Never miss a payment deadline",
-                    "No late fees or penalties",
-                    "Automatic payment every month",
-                    "Cancel anytime with one click",
-                    "Secure and encrypted transactions"
+                    'Never miss a payment deadline',
+                    'No late fees or penalties',
+                    'Automatic payment every month',
+                    'Cancel anytime with one click',
+                    'Secure and encrypted transactions',
                   ].map((benefit, index) => (
-                    <li key={index} className="flex items-start space-x-2 text-sm">
+                    <li
+                      key={index}
+                      className="flex items-start space-x-2 text-sm"
+                    >
                       <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700">{benefit}</span>
                     </li>
@@ -498,11 +626,19 @@ export function ResidentPortal() {
               <CardContent>
                 <form onSubmit={handleSetupAutopay} className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-900 mb-2">How AutoPay Works</h4>
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      How AutoPay Works
+                    </h4>
                     <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Your rent amount of ₹{residentData?.rentAmount.toLocaleString()} will be automatically deducted</li>
+                      <li>
+                        • Your rent amount of ₹
+                        {residentData?.rentAmount.toLocaleString()} will be
+                        automatically deducted
+                      </li>
                       <li>• Payment occurs on the 25th of every month</li>
-                      <li>• You'll receive a confirmation email for each payment</li>
+                      <li>
+                        • You'll receive a confirmation email for each payment
+                      </li>
                       <li>• You can disable AutoPay anytime</li>
                     </ul>
                   </div>
@@ -510,18 +646,29 @@ export function ResidentPortal() {
                   <Separator />
 
                   <div>
-                    <Label className="mb-3 block">Select Payment Method for AutoPay</Label>
-                    <RadioGroup value={autopayMethod} onValueChange={(value: any) => setAutopayMethod(value)}>
+                    <Label className="mb-3 block">
+                      Select Payment Method for AutoPay
+                    </Label>
+                    <RadioGroup
+                      value={autopayMethod}
+                      onValueChange={(value: any) => setAutopayMethod(value)}
+                    >
                       <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
                         <RadioGroupItem value="card" id="autopay-card" />
-                        <Label htmlFor="autopay-card" className="flex-1 cursor-pointer flex items-center">
+                        <Label
+                          htmlFor="autopay-card"
+                          className="flex-1 cursor-pointer flex items-center"
+                        >
                           <CreditCard className="h-4 w-4 mr-2" />
                           Credit / Debit Card
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50">
                         <RadioGroupItem value="upi" id="autopay-upi" />
-                        <Label htmlFor="autopay-upi" className="flex-1 cursor-pointer flex items-center">
+                        <Label
+                          htmlFor="autopay-upi"
+                          className="flex-1 cursor-pointer flex items-center"
+                        >
                           <Building2 className="h-4 w-4 mr-2" />
                           UPI AutoPay
                         </Label>
@@ -529,15 +676,22 @@ export function ResidentPortal() {
                     </RadioGroup>
 
                     {/* Card Details for AutoPay */}
-                    {autopayMethod === "card" && (
+                    {autopayMethod === 'card' && (
                       <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
                         <div>
-                          <Label htmlFor="autopayCardNumber">Card Number *</Label>
+                          <Label htmlFor="autopayCardNumber">
+                            Card Number *
+                          </Label>
                           <Input
                             id="autopayCardNumber"
                             required
                             value={autopayData.cardNumber}
-                            onChange={(e) => setAutopayData({ ...autopayData, cardNumber: e.target.value })}
+                            onChange={(e) =>
+                              setAutopayData({
+                                ...autopayData,
+                                cardNumber: e.target.value,
+                              })
+                            }
                             placeholder="1234 5678 9012 3456"
                             maxLength={19}
                           />
@@ -549,7 +703,12 @@ export function ResidentPortal() {
                               id="autopayExpiry"
                               required
                               value={autopayData.expiry}
-                              onChange={(e) => setAutopayData({ ...autopayData, expiry: e.target.value })}
+                              onChange={(e) =>
+                                setAutopayData({
+                                  ...autopayData,
+                                  expiry: e.target.value,
+                                })
+                              }
                               placeholder="MM/YY"
                               maxLength={5}
                             />
@@ -560,7 +719,12 @@ export function ResidentPortal() {
                               id="autopayCvv"
                               required
                               value={autopayData.cvv}
-                              onChange={(e) => setAutopayData({ ...autopayData, cvv: e.target.value })}
+                              onChange={(e) =>
+                                setAutopayData({
+                                  ...autopayData,
+                                  cvv: e.target.value,
+                                })
+                              }
                               placeholder="123"
                               maxLength={3}
                               type="password"
@@ -571,18 +735,24 @@ export function ResidentPortal() {
                     )}
 
                     {/* UPI Details for AutoPay */}
-                    {autopayMethod === "upi" && (
+                    {autopayMethod === 'upi' && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                         <Label htmlFor="autopayUpiId">UPI ID *</Label>
                         <Input
                           id="autopayUpiId"
                           required
                           value={autopayData.upiId}
-                          onChange={(e) => setAutopayData({ ...autopayData, upiId: e.target.value })}
+                          onChange={(e) =>
+                            setAutopayData({
+                              ...autopayData,
+                              upiId: e.target.value,
+                            })
+                          }
                           placeholder="yourname@upi"
                         />
                         <p className="text-xs text-gray-600 mt-2">
-                          You will receive a mandate approval request on your UPI app
+                          You will receive a mandate approval request on your
+                          UPI app
                         </p>
                       </div>
                     )}
@@ -610,3 +780,4 @@ export function ResidentPortal() {
     </div>
   );
 }
+

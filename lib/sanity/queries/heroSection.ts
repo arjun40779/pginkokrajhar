@@ -1,7 +1,8 @@
 import { client } from '@/sanity/lib/client';
+import type { HeroSection } from '@/sanity/types';
 
 // GROQ query to fetch the active hero section with all required fields
-const heroSectionQuery = `
+export const heroSectionQuery = `
   *[_type == "heroSection" && isActive == true][0] {
     _id,
     title,
@@ -43,48 +44,8 @@ const heroSectionQuery = `
   }
 `;
 
-export interface HeroSection {
-  _id: string;
-  title: string;
-  badge: {
-    show: boolean;
-    icon: string;
-    text: string;
-  };
-  mainTitle: string;
-  subtitle: string;
-  heroImage: {
-    asset: {
-      _id: string;
-      url: string;
-      metadata: {
-        dimensions: {
-          width: number;
-          height: number;
-        };
-      };
-    };
-    alt: string;
-    crop?: any;
-    hotspot?: any;
-  };
-  ctaButtons: Array<{
-    text: string;
-    url: string;
-    style: 'primary' | 'secondary' | 'outline';
-    icon?: string;
-  }>;
-  stats: Array<{
-    number: string;
-    label: string;
-    icon?: string;
-  }>;
-  backgroundColor: string;
-  isActive: boolean;
-}
-
-// Fetch the active hero section
-export async function getHeroSection(): Promise<HeroSection> {
+// Function to fetch hero section data
+export async function getHeroSection(): Promise<HeroSection | null> {
   try {
     console.log('🔍 Fetching hero section...');
     console.log('📋 Client config:', {
@@ -120,7 +81,7 @@ export async function getHeroSection(): Promise<HeroSection> {
     return heroSection;
   } catch (error) {
     console.error('❌ Error fetching hero section:', error);
-    throw new Error('Failed to fetch hero section');
+    return null;
   }
 }
 
