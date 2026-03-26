@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
-import { auth } from '@/lib/firebase/firebaseAdmin';
+// import { auth } from '@/lib/firebase/firebaseAdmin'; // Fix: auth not exported
 
 // GET /api/pg - List all PGs
 export async function GET(request: NextRequest) {
@@ -179,3 +179,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

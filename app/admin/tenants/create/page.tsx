@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -48,9 +48,6 @@ interface FormData {
 
 export default function CreateTenantPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const preSelectedRoomId = searchParams.get('roomId');
-  const preSelectedPgId = searchParams.get('pgId');
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +65,7 @@ export default function CreateTenantPage() {
     moveInDate: new Date().toISOString().split('T')[0],
     rentAmount: 0,
     rentStatus: 'PENDING',
-    roomId: preSelectedRoomId || '',
+    roomId: '',
     isActive: true,
     createUser: true,
   });
@@ -81,7 +78,6 @@ export default function CreateTenantPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        ...(preSelectedPgId && { pgId: preSelectedPgId }),
         status: 'available', // Only show available rooms
       });
 
@@ -648,3 +644,4 @@ export default function CreateTenantPage() {
     </div>
   );
 }
+

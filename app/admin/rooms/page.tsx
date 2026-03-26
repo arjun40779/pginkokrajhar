@@ -18,7 +18,6 @@ import {
   BedDouble,
   Wind,
   Bath,
-  BalconyIcon,
 } from 'lucide-react';
 
 interface Room {
@@ -412,3 +411,4 @@ export default function RoomsListPage() {
     </div>
   );
 }
+
