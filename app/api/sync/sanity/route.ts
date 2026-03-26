@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { createClient } from '@sanity/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 // Sanity client for writing data
 const sanityClient = createClient({
@@ -291,3 +289,4 @@ export async function GET() {
     );
   }
 }
+

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const tenantSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -33,8 +31,8 @@ const tenantSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') ?? '1');
-    const limit = parseInt(searchParams.get('limit') ?? '20');
+    const page = Number.parseInt(searchParams.get('page') ?? '1');
+    const limit = Number.parseInt(searchParams.get('limit') ?? '20');
     const search = searchParams.get('search') ?? '';
     const roomId = searchParams.get('roomId') ?? '';
     const pgId = searchParams.get('pgId') ?? '';
@@ -197,7 +195,7 @@ export async function POST(request: NextRequest) {
           data: {
             name: validatedData.name,
             mobile: validatedData.phone,
-            email: validatedData.email || null,
+            email: validatedData.email ?? null,
             role: 'TENANT',
           },
         });
@@ -209,9 +207,9 @@ export async function POST(request: NextRequest) {
       data: {
         name: validatedData.name,
         phone: validatedData.phone,
-        email: validatedData.email || null,
-        occupation: validatedData.occupation || null,
-        emergencyContact: validatedData.emergencyContact || null,
+        email: validatedData.email ?? null,
+        occupation: validatedData.occupation ?? null,
+        emergencyContact: validatedData.emergencyContact ?? '',
         moveInDate: new Date(validatedData.moveInDate),
         moveOutDate: validatedData.moveOutDate
           ? new Date(validatedData.moveOutDate)
@@ -265,7 +263,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: 'Validation failed', details: error.message },
         { status: 400 },
       );
     }
@@ -277,3 +275,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { createHmac } from 'node:crypto';
+import { prisma } from '@/prisma';
 
 // Sanity webhook secret - should be stored in environment variables
 const SANITY_WEBHOOK_SECRET = process.env.SANITY_WEBHOOK_SECRET || '';
@@ -90,8 +88,7 @@ function verifySignature(payload: string, signature: string): boolean {
     return false;
   }
 
-  const expectedSignature = crypto
-    .createHmac('sha256', SANITY_WEBHOOK_SECRET)
+  const expectedSignature = createHmac('sha256', SANITY_WEBHOOK_SECRET)
     .update(payload)
     .digest('hex');
 
@@ -104,9 +101,9 @@ async function generateUniqueSlug(
 ): Promise<string> {
   const baseSlug = name
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^\w\s-]/g, '')
+    .replaceAll(/[\s_-]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 
   let slug = baseSlug;
   let counter = 1;
@@ -365,3 +362,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

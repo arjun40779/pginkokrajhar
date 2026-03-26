@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { syncPGToSanity } from '@/utils/santitySync';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const pgUpdateSchema = z.object({
   name: z.string().min(1, 'PG name is required').optional(),

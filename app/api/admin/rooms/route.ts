@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const roomCreateSchema = z.object({
   roomNumber: z.string().min(1, 'Room number is required'),
@@ -50,8 +48,8 @@ const roomCreateSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = Number.parseInt(searchParams.get('page') || '1');
+    const limit = Number.parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const pgId = searchParams.get('pgId');
     const status = searchParams.get('status'); // available, occupied, maintenance, reserved
@@ -209,7 +207,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: 'Validation failed', details: error.message },
         { status: 400 },
       );
     }
