@@ -33,7 +33,7 @@ const pgCreateSchema = z.object({
 
   // Pricing
   startingPrice: z.number().positive('Starting price must be positive'),
-  securityDeposit: z.number().positive('Security deposit must be positive'),
+  securityDeposit: z.number().min(0, 'Security deposit cannot be negative'),
   brokerageCharges: z.number().default(0),
 
   // Utilities

@@ -41,7 +41,7 @@ const roomUpdateSchema = z.object({
   monthlyRent: z.number().positive('Monthly rent must be positive').optional(),
   securityDeposit: z
     .number()
-    .positive('Security deposit must be positive')
+    .min(0, 'Security deposit cannot be negative')
     .optional(),
   maintenanceCharges: z.number().optional(),
   electricityIncluded: z.boolean().optional(),
