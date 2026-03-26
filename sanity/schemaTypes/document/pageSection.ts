@@ -73,8 +73,7 @@ export const pageSection = defineType({
       name: 'sections',
       title: 'Page Sections',
       type: 'array',
-      description:
-        'Configure which sections appear on this page and their order',
+      description: 'Configure which sections appear on this page',
       of: [
         {
           type: 'object',
@@ -87,13 +86,24 @@ export const pageSection = defineType({
               type: 'string',
               options: {
                 list: [
-                  { title: 'Hero Section', value: 'hero' },
-                  { title: 'Amenities Section', value: 'amenities' },
-                  { title: 'Facilities Section', value: 'facilities' },
-                  { title: 'Features & CTA Section', value: 'featuresCta' },
+                  { title: 'Hero Section', value: 'heroSection' },
+                  { title: 'Amenities Section', value: 'amenitiesSection' },
+                  { title: 'Facilities Section', value: 'facilitiesSection' },
+                  {
+                    title: 'Features & CTA Section',
+                    value: 'featuresCtaSection',
+                  },
+                  { title: 'Contact Section', value: 'contactSection' },
+                  {
+                    title: 'Contact Location Section',
+                    value: 'contactLocationSection',
+                  },
+                  { title: 'FAQ Section', value: 'faqSection' },
+                  { title: 'PG Section', value: 'pgSection' },
+                  { title: 'Room Section', value: 'roomSection' },
                 ],
               },
-              validation: (rule) => rule.required(),
+              description: 'This helps categorize the section type',
             },
             {
               name: 'sectionRef',
@@ -104,6 +114,11 @@ export const pageSection = defineType({
                 { type: 'amenitiesSection' },
                 { type: 'facilitiesSection' },
                 { type: 'featuresCtaSection' },
+                { type: 'contactSection' },
+                { type: 'contactLocationSection' },
+                { type: 'faqSection' },
+                { type: 'pgSection' },
+                { type: 'roomSection' },
               ],
               validation: (rule) => rule.required(),
             },
@@ -163,38 +178,41 @@ export const pageSection = defineType({
                 },
               ],
             },
-            {
-              name: 'order',
-              title: 'Display Order',
-              type: 'number',
-              description:
-                'Order of this section on the page (lower numbers appear first)',
-              validation: (rule) => rule.min(0),
-            },
           ],
           preview: {
             select: {
               sectionType: 'sectionType',
               isVisible: 'isVisible',
-              order: 'order',
-              sectionRef: 'sectionRef.title',
+              title: 'sectionRef.title',
+              type: 'sectionRef._type',
             },
-            prepare({ sectionType, isVisible, order, sectionRef }) {
+            prepare({ sectionType, title, type, isVisible }) {
               const typeLabels = {
-                hero: 'Hero',
-                amenities: 'Amenities',
-                facilities: 'Facilities',
-                featuresCta: 'Features & CTA',
+                heroSection: 'Hero',
+                amenitiesSection: 'Amenities',
+                facilitiesSection: 'Facilities',
+                featuresCtaSection: 'Features & CTA',
+                contactSection: 'Contact Form',
+                contactLocationSection: 'Contact Location',
+                faqSection: 'FAQ',
               };
+
+              const displayType =
+                typeLabels[sectionType as keyof typeof typeLabels] ||
+                typeLabels[type as keyof typeof typeLabels] ||
+                sectionType ||
+                type ||
+                'Unknown';
+              const displayTitle = title || 'Untitled Section';
+
               return {
-                title: `${order ? `${order}. ` : ''}${typeLabels[sectionType as keyof typeof typeLabels] || sectionType}`,
-                subtitle: `${isVisible ? '👁️' : '🚫'} ${sectionRef || 'No section selected'}`,
+                title: displayType,
+                subtitle: `${isVisible ? '👁️ Visible' : '🚫 Hidden'} • ${displayTitle}`,
               };
             },
           },
         },
       ],
-      validation: (rule) => rule.min(1),
     }),
   ],
   preview: {

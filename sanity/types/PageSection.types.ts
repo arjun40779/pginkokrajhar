@@ -4,6 +4,9 @@ import type { HeroSection } from './HeroSection.types';
 import type { AmenitiesSection } from './AmenitiesSection.types';
 import type { FacilitiesSection } from './FacilitiesSection.types';
 import type { FeaturesCtaSection } from './FeaturesCtaSection.types';
+import type { ContactSection } from './ContactSection.types';
+import type { ContactLocationSection } from './ContactLocationSection.types';
+import type { FAQSection } from './FAQSection.types';
 
 export interface PageMetadata {
   pageTitle?: string;
@@ -18,7 +21,14 @@ export interface CustomSectionSettings {
   marginOverride?: string;
 }
 
-export type SectionType = 'hero' | 'amenities' | 'facilities' | 'featuresCta';
+export type SectionType =
+  | 'heroSection'
+  | 'amenitiesSection'
+  | 'facilitiesSection'
+  | 'featuresCtaSection'
+  | 'contactSection'
+  | 'contactLocationSection'
+  | 'faqSection';
 
 export interface SectionReference {
   sectionType: SectionType;
@@ -28,13 +38,15 @@ export interface SectionReference {
   };
   isVisible: boolean;
   customSettings?: CustomSectionSettings;
-  order?: number;
   // Populated section data
   sectionData?:
     | HeroSection
     | AmenitiesSection
     | FacilitiesSection
-    | FeaturesCtaSection;
+    | FeaturesCtaSection
+    | ContactSection
+    | ContactLocationSection
+    | FAQSection;
 }
 
 export interface PageSettings {
@@ -76,7 +88,11 @@ export interface PageSectionResponse extends Omit<
         | HeroSection
         | AmenitiesSection
         | FacilitiesSection
-        | FeaturesCtaSection;
+        | FeaturesCtaSection
+        | ContactSection
+        | ContactLocationSection
+        | FAQSection;
     }
   >;
 }
+

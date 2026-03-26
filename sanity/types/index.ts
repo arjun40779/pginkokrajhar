@@ -14,6 +14,8 @@ export * from './FooterSection.types';
 export * from './LayoutSection.types';
 export * from './PageSection.types';
 export * from './ContactSection.types';
+export * from './ContactLocationSection.types';
+export * from './FAQSection.types';
 
 // Re-export commonly used types for convenience
 export type {

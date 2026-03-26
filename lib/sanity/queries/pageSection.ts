@@ -131,6 +131,158 @@ export const pageQuery = `
             link,
             isExternal
           }
+        },
+        _type == "contactSection" => {
+          _type,
+          _id,
+          title,
+          sectionTitle,
+          sectionSubtitle,
+          contactCards[] {
+            type,
+            icon,
+            title,
+            details,
+            description
+          },
+          backgroundColor
+        },
+        _type == "contactLocationSection" => {
+          _type,
+          _id,
+          title,
+          sectionTitle,
+          sectionSubtitle,
+          address {
+            addressLine1,
+            addressLine2,
+            addressLine3
+          },
+          mapEmbedUrl,
+          backgroundColor
+        },
+        _type == "faqSection" => {
+          _type,
+          _id,
+          title,
+          sectionTitle,
+          sectionSubtitle,
+          faqItems[] {
+            _key,
+            question,
+            answer
+          },
+          backgroundColor
+        },
+        _type == "pgSection" => {
+          _type,
+          _id,
+          title,
+          pgName,
+          "slug": slug.current,
+          description,
+          images[] {
+            asset-> {
+              _id,
+              url
+            },
+            alt,
+            caption
+          },
+          location {
+            address,
+            area,
+            city,
+            state,
+            pincode,
+            nearbyLandmarks,
+            coordinates
+          },
+          contact {
+            ownerName,
+            phoneNumbers[] {
+              number,
+              type,
+              isWhatsApp
+            },
+            email
+          },
+          amenities[] {
+            name,
+            description,
+            icon,
+            isAvailable,
+            additionalCharges
+          },
+          availability {
+            totalRooms,
+            availableRooms,
+            lastUpdated
+          },
+          pricing {
+            startingPrice,
+            securityDeposit,
+            includesElectricity,
+            includesWater,
+            includesWifi
+          },
+          featured,
+          verificationStatus
+        },
+        _type == "roomSection" => {
+          _type,
+          _id,
+          title,
+          roomNumber,
+          "slug": slug.current,
+          description,
+          pgReference-> {
+            _id,
+            pgName,
+            "slug": slug.current
+          },
+          images[] {
+            asset-> {
+              _id,
+              url
+            },
+            alt,
+            caption
+          },
+          roomDetails {
+            roomType,
+            currentOccupancy,
+            maxOccupancy,
+            floor,
+            roomSize,
+            hasBalcony,
+            hasAttachedBathroom,
+            hasAC,
+            hasFan,
+            windowDirection
+          },
+          furniture[] {
+            itemName,
+            quantity,
+            condition,
+            description
+          },
+          pricing {
+            monthlyRent,
+            securityDeposit,
+            maintenanceCharges,
+            electricityCharges {
+              isIncluded,
+              perUnitRate,
+              monthlyLimit
+            }
+          },
+          availability {
+            status,
+            availableFrom,
+            lastUpdated
+          },
+          featured
         }
       }
     }
@@ -156,10 +308,9 @@ export const homePageQuery = `
       requireAuth,
       cachePolicy
     },
-    "sections": sections[isVisible == true] | order(order asc) {
+    "sections": sections[isVisible == true] {
       sectionType,
       isVisible,
-      order,
       customSettings {
         backgroundColor,
         paddingOverride,
@@ -208,8 +359,7 @@ export const homePageQuery = `
             title,
             description,
             icon,
-            isHighlighted,
-            order
+            isHighlighted
           },
           layout {
             columns,
@@ -231,8 +381,7 @@ export const homePageQuery = `
             description,
             image,
             "imageUrl": image.asset->url,
-            category,
-            order
+            category
           },
           layout {
             gridColumns,

@@ -10,6 +10,7 @@ import { Hero } from '@/components/sections/Hero';
 import AmenitiesSection from './sections/AmenitiesSection';
 import FacilitiesSection from './sections/FacilitiesSection';
 import FeaturesCTAs from './sections/FeaturesCTAs';
+import ContactLocationSection from './sections/ContactLocationSection';
 
 interface PageRendererProps {
   pageData: PageData;
@@ -55,6 +56,8 @@ function SectionRenderer({ section }: { section: PageSection }) {
       return <FacilitiesSection data={sectionData as any} />;
     case 'featuresCtaSection':
       return <FeaturesCTAs data={sectionData as any} />;
+    case 'contactLocationSection':
+      return <ContactLocationSection sectionData={sectionData as any} />;
     default:
       console.warn(`Unknown section type: ${(sectionData as any)._type}`);
       return null;
