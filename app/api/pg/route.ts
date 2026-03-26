@@ -10,7 +10,13 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        location: true,
+        address: true,
+        area: true,
+        city: true,
+        state: true,
+        pincode: true,
+        latitude: true,
+        longitude: true,
         description: true,
         createdAt: true,
         _count: {
@@ -20,7 +26,7 @@ export async function GET(request: NextRequest) {
         },
         rooms: {
           select: {
-            status: true,
+            availabilityStatus: true,
           },
         },
       },
@@ -33,14 +39,24 @@ export async function GET(request: NextRequest) {
     const pgsWithStats = pgs.map((pg) => {
       const totalRooms = pg.rooms.length;
       const vacantRooms = pg.rooms.filter(
-        (room) => room.status === 'VACANT',
+        (room) => room.availabilityStatus === 'AVAILABLE',
       ).length;
       const occupiedRooms = totalRooms - vacantRooms;
 
       return {
         id: pg.id,
         name: pg.name,
-        location: pg.location,
+        location: {
+          address: pg.address,
+          area: pg.area,
+          city: pg.city,
+          state: pg.state,
+          pincode: pg.pincode,
+          coordinates: {
+            lat: pg.latitude,
+            lng: pg.longitude,
+          },
+        },
         description: pg.description,
         createdAt: pg.createdAt,
         stats: {
