@@ -1,7 +1,12 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { syncPGToSanity } from '@/utils/santitySync';
 import { prisma } from '@/prisma';
+
+console.log('DB URL exists:', !!process.env.DATABASE_URL);
+console.log('Environment variables:', process.env);
 
 const pgUpdateSchema = z.object({
   name: z.string().min(1, 'PG name is required').optional(),
