@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
+    console.log('API Route called with ID:', params.id);
     const { id } = params;
 
     // Validate ID format (UUID)
@@ -152,10 +153,9 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch PG details',
+        error: 'Internal server error',
       },
       { status: 500 },
     );
   }
 }
-
