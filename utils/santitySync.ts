@@ -1,34 +1,177 @@
 // Utility functions for syncing data to Sanity
+import { createClient } from '@sanity/client';
+import { prisma } from '@/prisma';
+
+// Sanity client for writing data
+const sanityClient = createClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+  token: process.env.SANITY_API_WRITE_TOKEN!,
+  apiVersion: '2024-01-01',
+  useCdn: false,
+});
+
 interface SyncToSanityOptions {
   type: 'pg' | 'room';
   action: 'create' | 'update';
   id: string; // Database ID
 }
 
-export async function syncToSanity(options: SyncToSanityOptions) {
+async function syncPGToSanityDirect(pgId: string, action: 'create' | 'update') {
   try {
-    const response = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/sync/sanity`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(options),
-      },
-    );
+    const pg = await prisma.pG.findUnique({
+      where: { id: pgId },
+    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Sanity sync failed: ${error.error || 'Unknown error'}`);
+    if (!pg) {
+      throw new Error(`PG with ID ${pgId} not found in database`);
     }
 
-    const result = await response.json();
+    const sanityDocument = {
+      _type: 'pg',
+      _id: pg.sanityDocumentId || `pg-${pg.id}`,
+      dbId: pg.id,
+      name: pg.name,
+      slug: {
+        _type: 'slug',
+        current: pg.slug,
+      },
+      description: pg.description,
+      isActive: pg.isActive,
+      address: pg.address,
+      area: pg.area,
+      city: pg.city,
+      state: pg.state,
+      pincode: pg.pincode,
+      coordinates:
+        pg.latitude && pg.longitude
+          ? {
+              latitude: Number(pg.latitude),
+              longitude: Number(pg.longitude),
+            }
+          : undefined,
+      ownerName: pg.ownerName,
+      ownerPhone: pg.ownerPhone,
+      ownerEmail: pg.ownerEmail,
+      genderRestriction: pg.genderRestriction.toLowerCase(),
+      gateClosingTime: pg.gateClosingTime,
+      smokingAllowed: pg.smokingAllowed,
+      drinkingAllowed: pg.drinkingAllowed,
+      startingPrice: Number(pg.startingPrice),
+      securityDeposit: Number(pg.securityDeposit),
+      brokerageCharges: Number(pg.brokerageCharges),
+      electricityIncluded: pg.electricityIncluded,
+      waterIncluded: pg.waterIncluded,
+      wifiIncluded: pg.wifiIncluded,
+      totalRooms: pg.totalRooms,
+      availableRooms: pg.availableRooms,
+      featured: pg.featured,
+      verificationStatus: pg.verificationStatus.toLowerCase(),
+    };
+
+    const result = await sanityClient.createOrReplace(sanityDocument);
+
+    // Update PG with Sanity document ID if not exists
+    if (!pg.sanityDocumentId) {
+      await prisma.pG.update({
+        where: { id: pgId },
+        data: { sanityDocumentId: result._id },
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`Error syncing PG ${pgId} to Sanity:`, error);
+    throw error;
+  }
+}
+
+async function syncRoomToSanityDirect(
+  roomId: string,
+  action: 'create' | 'update',
+) {
+  try {
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        pg: true,
+      },
+    });
+
+    if (!room) {
+      throw new Error(`Room with ID ${roomId} not found in database`);
+    }
+
+    const sanityDocument = {
+      _type: 'room',
+      _id: room.sanityDocumentId || `room-${room.id}`,
+      dbId: room.id,
+      roomNumber: room.roomNumber,
+      slug: {
+        _type: 'slug',
+        current: room.slug,
+      },
+      description: room.description,
+      isActive: room.isActive,
+      roomType: room.roomType.toLowerCase(),
+      maxOccupancy: room.maxOccupancy,
+      currentOccupancy: room.currentOccupancy,
+      floor: room.floor,
+      roomSize: room.roomSize ? Number(room.roomSize) : undefined,
+      hasBalcony: room.hasBalcony,
+      hasAttachedBath: room.hasAttachedBath,
+      hasAC: room.hasAC,
+      hasFan: room.hasFan,
+      windowDirection: room.windowDirection?.toLowerCase(),
+      monthlyRent: Number(room.monthlyRent),
+      securityDeposit: Number(room.securityDeposit),
+      maintenanceCharges: Number(room.maintenanceCharges),
+      electricityIncluded: room.electricityIncluded,
+      availabilityStatus: room.availabilityStatus.toLowerCase(),
+      availableFrom: room.availableFrom?.toISOString(),
+      featured: room.featured,
+      pg: room.pg.sanityDocumentId
+        ? {
+            _type: 'reference',
+            _ref: room.pg.sanityDocumentId,
+          }
+        : undefined,
+    };
+
+    const result = await sanityClient.createOrReplace(sanityDocument);
+
+    // Update room with Sanity document ID if not exists
+    if (!room.sanityDocumentId) {
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { sanityDocumentId: result._id },
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`Error syncing room ${roomId} to Sanity:`, error);
+    throw error;
+  }
+}
+
+export async function syncToSanity(options: SyncToSanityOptions) {
+  try {
+    let result;
+
+    if (options.type === 'pg') {
+      result = await syncPGToSanityDirect(options.id, options.action);
+    } else if (options.type === 'room') {
+      result = await syncRoomToSanityDirect(options.id, options.action);
+    } else {
+      throw new Error(`Unknown sync type: ${options.type}`);
+    }
+
     console.log(
       `Successfully synced ${options.type} ${options.id} to Sanity:`,
-      result.sanityDocumentId,
+      result._id,
     );
-    return result;
+    return { sanityDocumentId: result._id };
   } catch (error) {
     console.error('Error syncing to Sanity:', error);
     // Don't throw - we don't want to fail the main operation if Sanity sync fails
@@ -49,3 +192,4 @@ export async function syncRoomToSanity(
 ) {
   return syncToSanity({ type: 'room', action, id: roomId });
 }
+
