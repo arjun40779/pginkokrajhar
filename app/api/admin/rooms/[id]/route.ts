@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const roomUpdateSchema = z.object({
   roomNumber: z.string().min(1, 'Room number is required').optional(),

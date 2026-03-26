@@ -30,18 +30,24 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        location: true,
+        address: true,
+        area: true,
+        city: true,
+        state: true,
+        pincode: true,
+        latitude: true,
+        longitude: true,
         description: true,
         createdAt: true,
         rooms: {
           select: {
             id: true,
-            type: true,
-            price: true,
-            status: true,
+            roomType: true,
+            monthlyRent: true,
+            availabilityStatus: true,
           },
           orderBy: {
-            type: 'asc',
+            roomNumber: 'asc',
           },
         },
         _count: {
@@ -65,24 +71,24 @@ export async function GET(
     // Calculate room statistics
     const totalRooms = pg.rooms.length;
     const vacantRooms = pg.rooms.filter(
-      (room) => room.status === 'VACANT',
+      (room) => room.availabilityStatus === 'VACANT',
     ).length;
     const occupiedRooms = totalRooms - vacantRooms;
 
     // Group rooms by type for better organization
     const roomsByType = pg.rooms.reduce(
       (acc, room) => {
-        if (!acc[room.type]) {
-          acc[room.type] = [];
+        if (!acc[room.roomType]) {
+          acc[room.roomType] = [];
         }
-        acc[room.type].push(room);
+        acc[room.roomType].push(room);
         return acc;
       },
       {} as Record<string, typeof pg.rooms>,
     );
 
     // Calculate price range
-    const prices = pg.rooms.map((room) => room.price);
+    const prices = pg.rooms.map((room) => Number(room.monthlyRent));
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
     const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
@@ -103,7 +109,18 @@ export async function GET(
     const pgDetails = {
       id: pg.id,
       name: pg.name,
-      location: pg.location,
+      // Location composite
+      location: {
+        address: pg.address,
+        area: pg.area,
+        city: pg.city,
+        state: pg.state,
+        pincode: pg.pincode,
+        coordinates: {
+          lat: pg.latitude,
+          lng: pg.longitude,
+        },
+      },
       description: pg.description,
       createdAt: pg.createdAt,
       stats: {
@@ -141,3 +158,4 @@ export async function GET(
     );
   }
 }
+

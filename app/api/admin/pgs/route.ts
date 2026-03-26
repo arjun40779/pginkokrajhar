@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { syncPGToSanity } from '@/utils/santitySync';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const pgCreateSchema = z.object({
   name: z.string().min(1, 'PG name is required'),
@@ -50,8 +50,8 @@ const pgCreateSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = Number.parseInt(searchParams.get('page') || '1');
+    const limit = Number.parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status'); // active, inactive
     const featured = searchParams.get('featured'); // true, false

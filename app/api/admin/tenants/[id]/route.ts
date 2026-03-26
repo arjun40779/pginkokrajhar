@@ -1,8 +1,8 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 const tenantUpdateSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
@@ -404,3 +404,4 @@ export async function DELETE(
     );
   }
 }
+
