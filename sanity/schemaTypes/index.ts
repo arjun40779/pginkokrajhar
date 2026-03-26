@@ -9,6 +9,8 @@ import { pageSection } from './document/pageSection';
 import { contactSection } from './document/contactSection';
 import { contactLocationSection } from './document/contactLocationSection';
 import { faqSection } from './document/faqSection';
+import { pgSchema } from './document/pgSchema';
+import { roomSchema } from './document/roomSchema';
 
 export const schemaTypes = [
   // Document types
@@ -23,8 +25,8 @@ export const schemaTypes = [
   contactSection,
   contactLocationSection,
   faqSection,
-  pgSection,
-  roomSection,
+  pgSchema,
+  roomSchema,
   // Object types
 ];
 

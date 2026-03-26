@@ -1,0 +1,223 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
+import { syncRoomToSanity } from '@/utils/santitySync';
+
+const prisma = new PrismaClient();
+
+const roomCreateSchema = z.object({
+  roomNumber: z.string().min(1, 'Room number is required'),
+  slug: z.string().min(1, 'Slug is required'),
+  description: z.string().optional(),
+  pgId: z.string().uuid('Valid PG ID is required'),
+
+  // Room Details
+  roomType: z.enum(['SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY']),
+  maxOccupancy: z.number().int().positive('Max occupancy must be positive'),
+  floor: z.number().int('Floor must be a number'),
+  roomSize: z.number().positive().optional(),
+
+  // Features
+  hasBalcony: z.boolean().default(false),
+  hasAttachedBath: z.boolean().default(false),
+  hasAC: z.boolean().default(false),
+  hasFan: z.boolean().default(true),
+  windowDirection: z
+    .enum([
+      'NORTH',
+      'SOUTH',
+      'EAST',
+      'WEST',
+      'NORTHEAST',
+      'NORTHWEST',
+      'SOUTHEAST',
+      'SOUTHWEST',
+    ])
+    .optional(),
+
+  // Pricing
+  monthlyRent: z.number().positive('Monthly rent must be positive'),
+  securityDeposit: z.number().positive('Security deposit must be positive'),
+  maintenanceCharges: z.number().default(0),
+  electricityIncluded: z.boolean().default(true),
+
+  // Meta
+  featured: z.boolean().default(false),
+  availableFrom: z.string().datetime().optional(),
+});
+
+// GET /api/admin/rooms - List all rooms
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const pgId = searchParams.get('pgId');
+    const status = searchParams.get('status'); // available, occupied, maintenance, reserved
+    const roomType = searchParams.get('roomType');
+    const featured = searchParams.get('featured');
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { roomNumber: { contains: search, mode: 'insensitive' } },
+        { pg: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (pgId) where.pgId = pgId;
+    if (status) where.availabilityStatus = status.toUpperCase();
+    if (roomType) where.roomType = roomType.toUpperCase();
+    if (featured === 'true') where.featured = true;
+    if (featured === 'false') where.featured = false;
+
+    const [rooms, total] = await Promise.all([
+      prisma.room.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ pg: { name: 'asc' } }, { roomNumber: 'asc' }],
+        include: {
+          pg: {
+            select: {
+              id: true,
+              name: true,
+              area: true,
+              city: true,
+            },
+          },
+          tenants: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              moveInDate: true,
+            },
+          },
+          _count: {
+            select: {
+              tenants: { where: { isActive: true } },
+              bookings: { where: { status: 'PENDING' } },
+            },
+          },
+        },
+      }),
+      prisma.room.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      rooms,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch rooms' },
+      { status: 500 },
+    );
+  }
+}
+
+// POST /api/admin/rooms - Create new room
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validatedData = roomCreateSchema.parse(body);
+
+    // Check if PG exists
+    const pg = await prisma.pG.findUnique({
+      where: { id: validatedData.pgId },
+    });
+
+    if (!pg) {
+      return NextResponse.json({ error: 'PG not found' }, { status: 404 });
+    }
+
+    // Check if room number already exists in this PG
+    const existingRoom = await prisma.room.findUnique({
+      where: {
+        pgId_roomNumber: {
+          pgId: validatedData.pgId,
+          roomNumber: validatedData.roomNumber,
+        },
+      },
+    });
+
+    if (existingRoom) {
+      return NextResponse.json(
+        { error: 'Room number already exists in this PG' },
+        { status: 400 },
+      );
+    }
+
+    // Check if slug already exists
+    const existingSlug = await prisma.room.findUnique({
+      where: { slug: validatedData.slug },
+    });
+
+    if (existingSlug) {
+      return NextResponse.json(
+        { error: 'Room with this slug already exists' },
+        { status: 400 },
+      );
+    }
+
+    // Create room
+    const room = await prisma.room.create({
+      data: {
+        ...validatedData,
+        availableFrom: validatedData.availableFrom
+          ? new Date(validatedData.availableFrom)
+          : null,
+      },
+      include: {
+        pg: {
+          select: {
+            id: true,
+            name: true,
+            area: true,
+            city: true,
+          },
+        },
+      },
+    });
+
+    // Update PG available rooms count
+    await prisma.pG.update({
+      where: { id: validatedData.pgId },
+      data: { availableRooms: { increment: 1 } },
+    });
+
+    // Sync to Sanity (non-blocking)
+    syncRoomToSanity(room.id, 'create').catch((error) => {
+      console.error('Failed to sync Room to Sanity:', error);
+    });
+
+    return NextResponse.json(room, { status: 201 });
+  } catch (error) {
+    console.error('Error creating room:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to create room' },
+      { status: 500 },
+    );
+  }
+}
+

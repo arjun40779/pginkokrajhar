@@ -165,7 +165,7 @@ export const pageQuery = `
           _type,
           _id,
           title,
-          sectionTitle,
+        sectionTitle,
           sectionSubtitle,
           faqItems[] {
             _key,

@@ -4,81 +4,307 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 model User {
   id        String   @id @default(uuid())
   name      String?
   mobile    String   @unique
+  email     String?  @unique
   role      Role     @default(TENANT)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   tenant    Tenant?
+  @@map("users")
 }
 
 model PG {
-  id          String   @id @default(uuid())
-  name        String
-  location    String
-  description String?
-  createdAt   DateTime @default(now())
-
-  rooms       Room[]
+  id                String   @id @default(uuid())
+  
+  // Basic Info
+  name              String
+  slug              String   @unique
+  description       String?
+  isActive          Boolean  @default(true)
+  
+  // Location
+  address           String
+  area              String
+  city              String
+  state             String
+  pincode           String
+  latitude          Float?
+  longitude         Float?
+  
+  // Contact
+  ownerName         String
+  ownerPhone        String
+  ownerEmail        String?
+  alternatePhone    String?
+  
+  // Rules & Policies
+  genderRestriction GenderRestriction @default(COED)
+  gateClosingTime   String?  // "22:00"
+  smokingAllowed    Boolean  @default(false)
+  drinkingAllowed   Boolean  @default(false)
+  
+  // Pricing
+  startingPrice     Decimal
+  securityDeposit   Decimal
+  brokerageCharges  Decimal? @default(0)
+  
+  // Utilities Included
+  electricityIncluded Boolean @default(true)
+  waterIncluded     Boolean  @default(true)
+  wifiIncluded      Boolean  @default(true)
+  
+  // Meta
+  totalRooms        Int
+  availableRooms    Int
+  featured          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(PENDING)
+  sanityDocumentId  String?  // Link to Sanity document
+  
+  // Relationships
+  rooms             Room[]
+  bookings          Booking[]
+  inquiries         Inquiry[]
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("pgs")
 }
 
 model Room {
-  id       String @id @default(uuid())
-  pgId     String
-  type     String
-  price    Int
-  status   RoomStatus @default(VACANT)
-
-  pg       PG @relation(fields: [pgId], references: [id])
+  id                String   @id @default(uuid())
+  
+  // Basic Info
+  roomNumber        String
+  slug              String   @unique
+  description       String?
+  isActive          Boolean  @default(true)
+  
+  // Room Details
+  roomType          RoomType
+  maxOccupancy      Int
+  currentOccupancy  Int      @default(0)
+  floor             Int
+  roomSize          Float?   // sq ft
+  
+  // Features
+  hasBalcony        Boolean  @default(false)
+  hasAttachedBath   Boolean  @default(false)
+  hasAC             Boolean  @default(false)
+  hasFan            Boolean  @default(true)
+  windowDirection   WindowDirection?
+  
+  // Pricing
+  monthlyRent       Decimal
+  securityDeposit   Decimal
+  maintenanceCharges Decimal? @default(0)
+  electricityIncluded Boolean @default(true)
+  
+  // Availability
+  availabilityStatus RoomStatus @default(AVAILABLE)
+  availableFrom     DateTime?
+  
+  // Relationships
+  pgId              String
+  pg                PG       @relation(fields: [pgId], references: [id], onDelete: Cascade)
+  bookings          Booking[]
+  tenants           Tenant[]
+  
+  // Meta
+  featured          Boolean  @default(false)
+  sanityDocumentId  String?  // Link to Sanity document
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("rooms")
+  @@unique([pgId, roomNumber])
 }
 
 model Tenant {
-  id         String @id @default(uuid())
-  userId     String @unique
-  pgId       String
-  roomId     String
-  rentAmount Int
-  rentStatus RentStatus @default(PENDING)
+  id              String   @id @default(uuid())
+  
+  // Personal Info
+  name            String
+  phone           String
+  email           String?
+  occupation      String?
+  emergencyContact Json?    // {name, relation, phone}
+  
+  // Tenancy Details
+  moveInDate      DateTime
+  moveOutDate     DateTime?
+  isActive        Boolean  @default(true)
+  rentAmount      Int
+  rentStatus      RentStatus @default(PENDING)
+  
+  // Relationships
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  roomId          String
+  room            Room     @relation(fields: [roomId], references: [id])
+  
+  // Payments
+  payments        Payment[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("tenants")
+}
 
-  user User @relation(fields: [userId], references: [id])
+model Booking {
+  id              String   @id @default(uuid())
+  
+  // Customer Info
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  
+  // Booking Details
+  checkInDate     DateTime
+  checkOutDate    DateTime?
+  status          BookingStatus @default(PENDING)
+  
+  // Pricing
+  monthlyRent     Decimal
+  securityDeposit Decimal
+  totalAmount     Decimal
+  paidAmount      Decimal  @default(0)
+  
+  // Relationships
+  pgId            String?
+  pg              PG?      @relation(fields: [pgId], references: [id])
+  roomId          String?
+  room            Room?    @relation(fields: [roomId], references: [id])
+  
+  // Meta
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("bookings")
 }
 
 model Payment {
   id        String   @id @default(uuid())
   tenantId  String
-  amount    Int
-  status    String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  amount    Decimal
+  status    PaymentStatus @default(PENDING)
+  paymentDate DateTime?
+  dueDate   DateTime
+  month     String   // "2024-03" format
+  notes     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("payments")
+  @@unique([tenantId, month])
 }
 
 model Inquiry {
-  id      String @id @default(uuid())
-  name    String
-  phone   String
-  message String?
-  pgId    String
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  email     String?
+  message   String?
+  pgId      String
+  pg        PG       @relation(fields: [pgId], references: [id])
+  status    InquiryStatus @default(NEW)
+  source    String?  // "website", "call", "whatsapp", etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("inquiries")
 }
 
+// Enums
 enum Role {
   ADMIN
   TENANT
+  OWNER
+}
+
+enum GenderRestriction {
+  BOYS
+  GIRLS
+  COED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  DORMITORY
+}
+
+enum WindowDirection {
+  NORTH
+  SOUTH
+  EAST
+  WEST
+  NORTHEAST  
+  NORTHWEST
+  SOUTHEAST
+  SOUTHWEST
 }
 
 enum RoomStatus {
-  VACANT
+  AVAILABLE
   OCCUPIED
+  MAINTENANCE
+  RESERVED
+  
+  // Legacy values (keeping for backward compatibility)
+  VACANT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }
 
 enum RentStatus {
   PAID
   PENDING
+  OVERDUE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  CLOSED
 }

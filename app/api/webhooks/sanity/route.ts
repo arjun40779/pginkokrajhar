@@ -1,0 +1,367 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+
+const prisma = new PrismaClient();
+
+// Sanity webhook secret - should be stored in environment variables
+const SANITY_WEBHOOK_SECRET = process.env.SANITY_WEBHOOK_SECRET || '';
+
+interface SanityWebhookPayload {
+  _type: 'webhook';
+  _id: string;
+  projectId: string;
+  dataset: string;
+  operation: 'create' | 'update' | 'delete';
+  document: {
+    _id: string;
+    _type: 'pg' | 'room';
+    _rev: string;
+    [key: string]: any;
+  };
+  previous?: {
+    _id: string;
+    _type: 'pg' | 'room';
+    _rev: string;
+    [key: string]: any;
+  };
+}
+
+interface PGDocument {
+  _id: string;
+  _type: 'pg';
+  dbId?: string;
+  name: string;
+  slug: { current: string };
+  description?: string;
+  isActive: boolean;
+  address: string;
+  area: string;
+  city: string;
+  state: string;
+  pincode: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail?: string;
+  alternatePhone?: string;
+  genderRestriction: 'BOYS' | 'GIRLS' | 'COED';
+  gateClosingTime?: string;
+  smokingAllowed: boolean;
+  drinkingAllowed: boolean;
+  electricityIncluded: boolean;
+  waterIncluded: boolean;
+  wifiIncluded: boolean;
+  featured: boolean;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+}
+
+interface RoomDocument {
+  _id: string;
+  _type: 'room';
+  dbId?: string;
+  roomNumber: string;
+  slug: { current: string };
+  description?: string;
+  isActive: boolean;
+  roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
+  maxOccupancy: number;
+  floor: number;
+  roomSize?: number;
+  hasBalcony: boolean;
+  hasAttachedBath: boolean;
+  hasAC: boolean;
+  hasFan: boolean;
+  windowDirection?: string;
+  electricityIncluded: boolean;
+  pgId?: string;
+  pgReference?: {
+    _ref: string;
+  };
+  featured: boolean;
+}
+
+function verifySignature(payload: string, signature: string): boolean {
+  if (!SANITY_WEBHOOK_SECRET) {
+    console.warn('SANITY_WEBHOOK_SECRET not configured');
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', SANITY_WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+
+  return `sha256=${expectedSignature}` === signature;
+}
+
+async function generateUniqueSlug(
+  name: string,
+  type: 'pg' | 'room',
+): Promise<string> {
+  const baseSlug = name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  let slug = baseSlug;
+  let counter = 1;
+
+  const table = type === 'pg' ? 'pG' : 'room';
+
+  while (true) {
+    const existing = await prisma[table].findUnique({
+      where: { slug },
+    });
+
+    if (!existing) {
+      break;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  return slug;
+}
+
+async function syncPGToDatabase(
+  document: PGDocument,
+  operation: 'create' | 'update',
+): Promise<void> {
+  try {
+    const slug = await generateUniqueSlug(document.name, 'pg');
+
+    const pgData = {
+      name: document.name,
+      slug: document.slug?.current || slug,
+      description: document.description || null,
+      isActive: document.isActive !== false,
+      address: document.address,
+      area: document.area,
+      city: document.city,
+      state: document.state,
+      pincode: document.pincode,
+      latitude: document.coordinates?.latitude || null,
+      longitude: document.coordinates?.longitude || null,
+      ownerName: document.ownerName,
+      ownerPhone: document.ownerPhone,
+      ownerEmail: document.ownerEmail || null,
+      alternatePhone: document.alternatePhone || null,
+      genderRestriction: document.genderRestriction || 'COED',
+      gateClosingTime: document.gateClosingTime || null,
+      smokingAllowed: document.smokingAllowed || false,
+      drinkingAllowed: document.drinkingAllowed || false,
+      electricityIncluded: document.electricityIncluded !== false,
+      waterIncluded: document.waterIncluded !== false,
+      wifiIncluded: document.wifiIncluded !== false,
+      featured: document.featured || false,
+      verificationStatus: document.verificationStatus || 'PENDING',
+      // Default pricing values - these will be managed in the admin panel
+      startingPrice: 0,
+      securityDeposit: 0,
+      brokerageCharges: 0,
+      totalRooms: 0,
+      availableRooms: 0,
+      sanityDocumentId: document._id,
+    };
+
+    if (operation === 'create' || !document.dbId) {
+      // Create new PG
+      const newPG = await prisma.pG.create({
+        data: pgData,
+      });
+
+      console.log(`Created PG in database: ${newPG.id}`);
+    } else {
+      // Update existing PG
+      await prisma.pG.update({
+        where: { id: document.dbId },
+        data: {
+          ...pgData,
+          // Don't override pricing and room counts during updates
+          startingPrice: undefined,
+          securityDeposit: undefined,
+          brokerageCharges: undefined,
+          totalRooms: undefined,
+          availableRooms: undefined,
+        },
+      });
+
+      console.log(`Updated PG in database: ${document.dbId}`);
+    }
+  } catch (error) {
+    console.error('Error syncing PG to database:', error);
+    throw error;
+  }
+}
+
+async function syncRoomToDatabase(
+  document: RoomDocument,
+  operation: 'create' | 'update',
+): Promise<void> {
+  try {
+    // Find the PG by Sanity reference or dbId
+    let pgId = document.pgId;
+
+    if (!pgId && document.pgReference?._ref) {
+      // Try to find PG by Sanity document ID
+      const pg = await prisma.pG.findFirst({
+        where: { sanityDocumentId: document.pgReference._ref },
+      });
+
+      if (!pg) {
+        throw new Error(
+          `PG not found for Sanity reference: ${document.pgReference._ref}`,
+        );
+      }
+
+      pgId = pg.id;
+    }
+
+    if (!pgId) {
+      throw new Error('No PG ID or reference found for room');
+    }
+
+    const slug = await generateUniqueSlug(`${document.roomNumber}`, 'room');
+
+    const roomData = {
+      roomNumber: document.roomNumber,
+      slug: document.slug?.current || slug,
+      description: document.description || null,
+      isActive: document.isActive !== false,
+      roomType: document.roomType,
+      maxOccupancy: document.maxOccupancy,
+      floor: document.floor,
+      roomSize: document.roomSize || null,
+      hasBalcony: document.hasBalcony || false,
+      hasAttachedBath: document.hasAttachedBath || false,
+      hasAC: document.hasAC || false,
+      hasFan: document.hasFan !== false,
+      windowDirection: document.windowDirection || null,
+      electricityIncluded: document.electricityIncluded !== false,
+      pgId: pgId,
+      featured: document.featured || false,
+      // Default values - these will be managed in the admin panel
+      currentOccupancy: 0,
+      monthlyRent: 0,
+      securityDeposit: 0,
+      maintenanceCharges: 0,
+      availabilityStatus: 'AVAILABLE',
+      sanityDocumentId: document._id,
+    };
+
+    if (operation === 'create' || !document.dbId) {
+      // Create new Room
+      const newRoom = await prisma.room.create({
+        data: roomData,
+      });
+
+      // Update PG room counts
+      await updatePGRoomCounts(pgId);
+
+      console.log(`Created Room in database: ${newRoom.id}`);
+    } else {
+      // Update existing Room
+      await prisma.room.update({
+        where: { id: document.dbId },
+        data: {
+          ...roomData,
+          // Don't override pricing and occupancy during updates
+          currentOccupancy: undefined,
+          monthlyRent: undefined,
+          securityDeposit: undefined,
+          maintenanceCharges: undefined,
+          availabilityStatus: undefined,
+        },
+      });
+
+      console.log(`Updated Room in database: ${document.dbId}`);
+    }
+  } catch (error) {
+    console.error('Error syncing Room to database:', error);
+    throw error;
+  }
+}
+
+async function updatePGRoomCounts(pgId: string): Promise<void> {
+  try {
+    const roomCounts = await prisma.room.aggregate({
+      where: { pgId: pgId },
+      _count: { id: true },
+    });
+
+    const availableRooms = await prisma.room.count({
+      where: {
+        pgId: pgId,
+        availabilityStatus: 'AVAILABLE',
+      },
+    });
+
+    await prisma.pG.update({
+      where: { id: pgId },
+      data: {
+        totalRooms: roomCounts._count.id,
+        availableRooms: availableRooms,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating PG room counts:', error);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.text();
+    const signature = request.headers.get('sanity-webhook-signature') || '';
+
+    // Verify webhook signature
+    if (!verifySignature(body, signature)) {
+      return NextResponse.json(
+        { error: 'Invalid webhook signature' },
+        { status: 401 },
+      );
+    }
+
+    const payload: SanityWebhookPayload = JSON.parse(body);
+
+    // Only handle create and update operations for pg and room documents
+    if (
+      !['create', 'update'].includes(payload.operation) ||
+      !['pg', 'room'].includes(payload.document._type)
+    ) {
+      return NextResponse.json({ message: 'Operation not handled' });
+    }
+
+    const document = payload.document;
+    const operation = payload.operation;
+
+    console.log(
+      `Processing ${operation} operation for ${document._type}:`,
+      document._id,
+    );
+
+    if (document._type === 'pg') {
+      await syncPGToDatabase(document as PGDocument, operation);
+    } else if (document._type === 'room') {
+      await syncRoomToDatabase(document as RoomDocument, operation);
+    }
+
+    return NextResponse.json({
+      message: `Successfully processed ${operation} operation for ${document._type}`,
+    });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
+    );
+  }
+}
