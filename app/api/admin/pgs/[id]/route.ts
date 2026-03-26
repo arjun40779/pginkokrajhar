@@ -43,7 +43,7 @@ const pgUpdateSchema = z.object({
     .optional(),
   securityDeposit: z
     .number()
-    .positive('Security deposit must be positive')
+    .min(0, 'Security deposit cannot be negative')
     .optional(),
   brokerageCharges: z.number().optional(),
 

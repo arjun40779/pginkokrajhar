@@ -37,7 +37,7 @@ const roomCreateSchema = z.object({
 
   // Pricing
   monthlyRent: z.number().positive('Monthly rent must be positive'),
-  securityDeposit: z.number().positive('Security deposit must be positive'),
+  securityDeposit: z.number().min(0, 'Security deposit cannot be negative'),
   maintenanceCharges: z.number().default(0),
   electricityIncluded: z.boolean().default(true),
 
