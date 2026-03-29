@@ -56,7 +56,6 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
 
   // Use Sanity data or fallback
   const data = headerData;
-  console.log(data);
 
   // Find contact item for mobile top-right placement
   const contactItem = data?.navigation?.find(

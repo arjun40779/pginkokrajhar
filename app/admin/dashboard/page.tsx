@@ -354,13 +354,6 @@ function AdminHeader() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Link href="/admin/settings">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </Link>
-
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4" />
               <span className="text-sm">

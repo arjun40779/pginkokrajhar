@@ -27,8 +27,6 @@ const navigation = [
   { name: 'Tenants', href: '/admin/tenants', icon: Users },
   { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
   { name: 'Inquiries', href: '/admin/inquiries', icon: FileText },
-  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 function AdminSidebar() {

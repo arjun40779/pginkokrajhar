@@ -6,18 +6,18 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createClient();
     const {
-      data: { user: authUser },
+      data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !authUser) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get user's tenant information
     const tenant = await prisma.tenant.findFirst({
       where: {
-        userId: authUser.id,
+        userId: user.id,
         isActive: true,
       },
     });
@@ -72,3 +72,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

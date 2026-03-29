@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -23,7 +23,30 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  // Check for OAuth errors from callback
+  useEffect(() => {
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      switch (oauthError) {
+        case 'oauth_failed':
+          setError('Google sign-in failed. Please try again.');
+          break;
+        case 'no_code':
+          setError(
+            'Authorization code not received. Please try signing in again.',
+          );
+          break;
+        case 'oauth_callback_error':
+          setError('Sign-in callback failed. Please try again.');
+          break;
+        default:
+          setError('An error occurred during sign-in. Please try again.');
+      }
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,17 +61,19 @@ export default function LoginForm() {
     if (error) {
       setError(error.message);
     } else {
-      router.push('/dashboard');
+      router.push('/admin/dashboard');
     }
     setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(''); // Clear any existing errors
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/admin/dashboard`,
       },
     });
 
@@ -56,6 +81,7 @@ export default function LoginForm() {
       setError(error.message);
       setLoading(false);
     }
+    // Don't set loading to false here - the redirect will happen
   };
 
   return (

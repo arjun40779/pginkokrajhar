@@ -1,67 +1,100 @@
 'use client';
 
-import { AuthProvider } from '@/lib/auth/AuthContext';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import UserDashboard from '@/components/dashboard/UserDashboard';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { LogOut, User } from 'lucide-react';
-import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-function DashboardHeader() {
-  const { user, userProfile, signOut } = useAuth();
+export default function Dashboard() {
+  const { user, userProfile, loading, signOut } = useAuth();
+  const router = useRouter();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    router.push('/auth/login');
+    return null;
+  }
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/auth/login');
+  };
 
   return (
-    <header className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              PG Inkokrajhar
-            </Link>
-            <span className="text-gray-500">/</span>
-            <span className="text-gray-600  ">Dashboard</span>
-          </div>
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <Button onClick={handleSignOut} variant="outline">
+            Sign Out
+          </Button>
+        </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <User className="h-4 w-4" />
-              <span className="text-sm">
-                {userProfile?.name || user?.email}
-              </span>
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {userProfile?.role || 'User'}
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome Back!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p>
+                  <strong>Name:</strong> {userProfile?.name || 'Not set'}
+                </p>
+                <p>
+                  <strong>Email:</strong> {user?.email}
+                </p>
+                <p>
+                  <strong>Mobile:</strong> {userProfile?.mobile || 'Not set'}
+                </p>
+                <p>
+                  <strong>Role:</strong> {userProfile?.role || 'TENANT'}
+                </p>
+                <p>
+                  <strong>Status:</strong>{' '}
+                  {userProfile?.isActive ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={() => router.push('/admin/dashboard')}
+                variant="outline"
+              >
+                Go to Admin Dashboard
+              </Button>
+              <Button
+                className="w-full"
+                onClick={() => router.push('/resident-portal')}
+                variant="outline"
+              >
+                Resident Portal
+              </Button>
+              <Button
+                className="w-full"
+                onClick={() => router.push('/rooms')}
+                variant="outline"
+              >
+                Browse Rooms
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </header>
+    </div>
   );
 }
-
-function DashboardContent() {
-  return (
-    <ProtectedRoute allowedRoles={['TENANT', 'OWNER']}>
-      <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <main>
-          <UserDashboard />
-        </main>
-      </div>
-    </ProtectedRoute>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <AuthProvider>
-      <DashboardContent />
-    </AuthProvider>
-  );
-}
-

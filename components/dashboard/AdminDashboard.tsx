@@ -1,217 +1,239 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+import Link from 'next/link';
+import {
+  BedDouble,
+  Building,
+  Calendar,
+  MessageSquare,
+  PlusCircle,
+  TrendingUp,
+} from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Users,
-  Building,
-  BedDouble,
-  CreditCard,
-  TrendingUp,
-  Calendar,
-} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-interface AdminStats {
-  totalUsers: number;
-  totalPGs: number;
-  totalRooms: number;
-  occupiedRooms: number;
-  totalBookings: number;
-  pendingPayments: number;
-  monthlyRevenue: number;
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+// Real-time room list: number, price, occupancy
+interface RoomRow {
+  id: string;
+  roomNumber: string;
+  roomType: string;
+  monthlyRent: string | number;
+  maxOccupancy: number;
+  currentOccupancy: number;
+  availabilityStatus: string;
+  pg: { id: string; name: string };
 }
 
+interface RoomsResponse {
+  rooms: RoomRow[];
+  total: number;
+}
+
+interface Stats {
+  totalPGs: number;
+  totalRooms: number;
+  availableRooms: number;
+  occupiedRooms: number;
+  occupancyRate: number;
+  pendingBookings: number;
+  newInquiries: number;
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  AVAILABLE: 'bg-green-100 text-green-800',
+  OCCUPIED: 'bg-red-100 text-red-800',
+  RESERVED: 'bg-blue-100 text-blue-800',
+  MAINTENANCE: 'bg-yellow-100 text-yellow-800',
+};
+
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<AdminStats>({
-    totalUsers: 0,
-    totalPGs: 0,
-    totalRooms: 0,
-    occupiedRooms: 0,
-    totalBookings: 0,
-    pendingPayments: 0,
-    monthlyRevenue: 0,
+  // Stats — refresh every 60 s
+  const { data: stats } = useSWR<Stats>('/api/admin/stats', fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: true,
   });
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAdminStats = async () => {
-      try {
-        const response = await fetch('/api/admin/stats');
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
-      } catch (error) {
-        console.error('Error fetching admin stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Room list with price + occupancy — refresh every 30 s
+  const { data: roomsData, isLoading: roomsLoading } = useSWR<RoomsResponse>(
+    '/api/admin/rooms?limit=100',
+    fetcher,
+    { refreshInterval: 30_000, dedupingInterval: 10_000 },
+  );
 
-    fetchAdminStats();
-  }, []);
-
-  if (loading) {
-    return <div className="flex justify-center p-8">Loading...</div>;
-  }
-
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      icon: Users,
-      color: 'text-blue-600',
-    },
-    {
-      title: 'Total PGs',
-      value: stats.totalPGs,
-      icon: Building,
-      color: 'text-green-600',
-    },
-    {
-      title: 'Total Rooms',
-      value: stats.totalRooms,
-      icon: BedDouble,
-      color: 'text-purple-600',
-    },
-    {
-      title: 'Occupied Rooms',
-      value: stats.occupiedRooms,
-      icon: BedDouble,
-      color: 'text-orange-600',
-    },
-    {
-      title: 'Total Bookings',
-      value: stats.totalBookings,
-      icon: Calendar,
-      color: 'text-indigo-600',
-    },
-    {
-      title: 'Pending Payments',
-      value: stats.pendingPayments,
-      icon: CreditCard,
-      color: 'text-red-600',
-    },
-    {
-      title: 'Monthly Revenue',
-      value: `₹${stats.monthlyRevenue}`,
-      icon: TrendingUp,
-      color: 'text-emerald-600',
-    },
-  ];
+  const rooms = roomsData?.rooms ?? [];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Badge variant="secondary">Administrator</Badge>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Badge variant="secondary">Admin</Badge>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          {
+            label: 'Total PGs',
+            value: stats?.totalPGs ?? '—',
+            icon: Building,
+            color: 'text-green-600',
+            href: '/admin/pgs',
+          },
+          {
+            label: 'Total Rooms',
+            value: stats?.totalRooms ?? '—',
+            icon: BedDouble,
+            color: 'text-purple-600',
+            href: '/admin/rooms',
+          },
+          {
+            label: 'Available',
+            value: stats?.availableRooms ?? '—',
+            icon: TrendingUp,
+            color: 'text-blue-600',
+            href: '/admin/rooms',
+          },
+          {
+            label: 'Occupancy',
+            value: stats ? `${stats.occupancyRate}%` : '—',
+            icon: TrendingUp,
+            color: 'text-indigo-600',
+          },
+        ].map((s) => {
+          const card = (
+            <Card key={s.label} className={s.href ? 'hover:shadow-md cursor-pointer transition-shadow' : ''}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">{s.label}</CardTitle>
+                <s.icon className={`h-4 w-4 ${s.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{s.value}</div>
+              </CardContent>
+            </Card>
+          );
+          return s.href ? <Link key={s.label} href={s.href}>{card}</Link> : <div key={s.label}>{card}</div>;
+        })}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick actions */}
+      <div className="flex flex-wrap gap-3">
+        <Link href="/admin/pgs/create">
+          <Button variant="outline" size="sm" className="gap-2">
+            <PlusCircle className="h-4 w-4" />
+            New PG
+          </Button>
+        </Link>
+        <Link href="/admin/rooms/create">
+          <Button variant="outline" size="sm" className="gap-2">
+            <BedDouble className="h-4 w-4" />
+            New Room
+          </Button>
+        </Link>
+        <Link href="/admin/bookings">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            Bookings{stats?.pendingBookings ? ` (${stats.pendingBookings})` : ''}
+          </Button>
+        </Link>
+        <Link href="/admin/inquiries">
+          <Button variant="outline" size="sm" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Inquiries{stats?.newInquiries ? ` (${stats.newInquiries})` : ''}
+          </Button>
+        </Link>
+      </div>
+
+      {/* Room inventory table: No, Price, Qty */}
       <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Manage your PG business efficiently</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Room Inventory</CardTitle>
+          <span className="text-xs text-gray-400">Live · refreshes every 30 s</span>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-4 text-center">
-                <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                <h3 className="font-medium">Manage Users</h3>
-                <p className="text-sm text-gray-600">
-                  View and manage user accounts
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-4 text-center">
-                <Building className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                <h3 className="font-medium">Manage PGs</h3>
-                <p className="text-sm text-gray-600">
-                  Add and manage PG properties
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-4 text-center">
-                <CreditCard className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-                <h3 className="font-medium">Payment Management</h3>
-                <p className="text-sm text-gray-600">
-                  Track payments and revenues
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            Latest updates from your PG management system
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium">New user registration</p>
-                <p className="text-sm text-gray-600">
-                  John Doe joined as a tenant
-                </p>
-              </div>
-              <Badge variant="outline">2 hours ago</Badge>
+        <CardContent className="p-0">
+          {roomsLoading && (
+            <div className="p-6 space-y-2">
+              {['r1', 'r2', 'r3', 'r4', 'r5'].map((k) => (
+                <div key={k} className="h-10 bg-gray-100 rounded animate-pulse" />
+              ))}
             </div>
-
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium">Payment received</p>
-                <p className="text-sm text-gray-600">
-                  ₹15,000 rent payment from Green Valley PG
-                </p>
-              </div>
-              <Badge variant="outline">5 hours ago</Badge>
+          )}
+          {!roomsLoading && rooms.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              <BedDouble className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+              <p>No rooms yet.</p>
+              <Link href="/admin/rooms/create">
+                <Button size="sm" className="mt-3">Add First Room</Button>
+              </Link>
             </div>
-
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium">New booking</p>
-                <p className="text-sm text-gray-600">
-                  Room 201 booked at Sunrise PG
-                </p>
-              </div>
-              <Badge variant="outline">1 day ago</Badge>
+          )}
+          {!roomsLoading && rooms.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                    <th className="text-left px-4 py-3 font-medium">PG</th>
+                    <th className="text-left px-4 py-3 font-medium">Room No.</th>
+                    <th className="text-left px-4 py-3 font-medium">Type</th>
+                    <th className="text-right px-4 py-3 font-medium">Price / mo</th>
+                    <th className="text-center px-4 py-3 font-medium">Occupied / Max</th>
+                    <th className="text-center px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rooms.map((room) => (
+                    <tr
+                      key={room.id}
+                      className="border-b hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-gray-700">{room.pg.name}</td>
+                      <td className="px-4 py-3 font-semibold">{room.roomNumber}</td>
+                      <td className="px-4 py-3 text-gray-600 capitalize">
+                        {room.roomType.toLowerCase()}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-blue-600">
+                        ₹{Number(room.monthlyRent).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={
+                            room.currentOccupancy >= room.maxOccupancy
+                              ? 'text-red-600 font-semibold'
+                              : 'text-gray-700'
+                          }
+                        >
+                          {room.currentOccupancy} / {room.maxOccupancy}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            STATUS_COLOR[room.availabilityStatus] ?? 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {room.availabilityStatus}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/admin/rooms/${room.id}`}>
+                          <Button variant="ghost" size="sm">Edit</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

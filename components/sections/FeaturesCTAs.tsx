@@ -7,7 +7,6 @@ const FeaturesCTAs = ({ data }: { data: FeaturesCtaSection }) => {
   const { featuresTitle, ctaCards, features } = data;
 
   // Debug log to check if features are being passed correctly
-  console.log('FeaturesCTAs data:', { featuresTitle, features, ctaCards });
 
   const card1 = ctaCards?.[0];
   const card2 = ctaCards?.[1];

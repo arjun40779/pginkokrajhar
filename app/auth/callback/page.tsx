@@ -6,18 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthCallback() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // The actual auth handling is done by the route.ts file
-    // This page just shows a loading state while redirecting
-    const timer = setTimeout(() => {
-      router.push('/dashboard');
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [router]);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
@@ -34,3 +22,4 @@ export default function AuthCallback() {
     </div>
   );
 }
+

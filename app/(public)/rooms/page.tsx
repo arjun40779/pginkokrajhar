@@ -1,7 +1,11 @@
-import { Rooms } from '@/components/pages/Rooms';
+import { getAllPGs } from '@/lib/sanity/queries/pgSection';
+import { RoomsClient } from '@/components/pages/RoomsClient';
 
-const Page = () => {
-  return <Rooms />;
-};
-export default Page;
+// Revalidate content every 60 seconds (ISR)
+export const revalidate = 60;
+
+export default async function RoomsPage() {
+  const pgs = await getAllPGs();
+  return <RoomsClient initialPGs={pgs} />;
+}
 

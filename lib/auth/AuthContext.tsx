@@ -32,12 +32,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async () => {
     try {
-      const response = await fetch(`/api/user/profile?userId=${userId}`);
+      // Call API without userId - the API will get user from session
+      const response = await fetch('/api/user/profile');
       if (response.ok) {
         const profile = await response.json();
         setUserProfile(profile);
+      } else if (response.status === 401) {
+        // Unauthorized - clear user state
+        setUser(null);
+        setUserProfile(null);
       } else {
         setUserProfile(null);
       }
@@ -48,12 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUser = async () => {
+    const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     setUser(user);
     if (user) {
-      await fetchUserProfile(user.id);
+      await fetchUserProfile();
     } else {
       setUserProfile(null);
     }
@@ -73,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
-        await fetchUserProfile(user.id);
+        await fetchUserProfile();
       }
       setLoading(false);
     };
@@ -85,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        await fetchUserProfile();
       } else {
         setUserProfile(null);
       }
@@ -111,3 +117,4 @@ export function useAuth() {
   }
   return context;
 }
+
