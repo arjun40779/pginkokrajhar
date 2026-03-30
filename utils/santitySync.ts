@@ -11,25 +11,41 @@ const sanityClient = createClient({
   useCdn: false,
 });
 
+type SyncAction = 'create' | 'update' | 'delete';
+
 interface SyncToSanityOptions {
   type: 'pg' | 'room';
-  action: 'create' | 'update';
+  action: SyncAction;
   id: string; // Database ID
 }
 
-async function syncPGToSanityDirect(pgId: string, action: 'create' | 'update') {
+async function syncPGToSanityDirect(pgId: string, action: SyncAction) {
   try {
     const pg = await prisma.pG.findUnique({
       where: { id: pgId },
+      include: {
+        rooms: {
+          select: {
+            sanityDocumentId: true,
+          },
+        },
+      },
     });
 
     if (!pg) {
       throw new Error(`PG with ID ${pgId} not found in database`);
     }
 
+    const sanityId = pg.sanityDocumentId || `pg-${pg.id}`;
+
+    if (action === 'delete') {
+      await sanityClient.delete(sanityId);
+      return { _id: sanityId };
+    }
+
     const sanityDocument = {
       _type: 'pg',
-      _id: pg.sanityDocumentId || `pg-${pg.id}`,
+      _id: sanityId,
       dbId: pg.id,
       name: pg.name,
       slug: {
@@ -53,20 +69,17 @@ async function syncPGToSanityDirect(pgId: string, action: 'create' | 'update') {
       ownerName: pg.ownerName,
       ownerPhone: pg.ownerPhone,
       ownerEmail: pg.ownerEmail,
-      genderRestriction: pg.genderRestriction.toLowerCase(),
-      gateClosingTime: pg.gateClosingTime,
-      smokingAllowed: pg.smokingAllowed,
-      drinkingAllowed: pg.drinkingAllowed,
       startingPrice: Number(pg.startingPrice),
       securityDeposit: Number(pg.securityDeposit),
       brokerageCharges: Number(pg.brokerageCharges),
-      electricityIncluded: pg.electricityIncluded,
-      waterIncluded: pg.waterIncluded,
-      wifiIncluded: pg.wifiIncluded,
       totalRooms: pg.totalRooms,
       availableRooms: pg.availableRooms,
-      featured: pg.featured,
-      verificationStatus: pg.verificationStatus.toLowerCase(),
+      roomReferences: pg.rooms
+        .filter((room) => room.sanityDocumentId)
+        .map((room) => ({
+          _type: 'reference',
+          _ref: room.sanityDocumentId as string,
+        })),
     };
 
     const result = await sanityClient.createOrReplace(sanityDocument);
@@ -86,10 +99,7 @@ async function syncPGToSanityDirect(pgId: string, action: 'create' | 'update') {
   }
 }
 
-async function syncRoomToSanityDirect(
-  roomId: string,
-  action: 'create' | 'update',
-) {
+async function syncRoomToSanityDirect(roomId: string, action: SyncAction) {
   try {
     const room = await prisma.room.findUnique({
       where: { id: roomId },
@@ -102,9 +112,23 @@ async function syncRoomToSanityDirect(
       throw new Error(`Room with ID ${roomId} not found in database`);
     }
 
+    const sanityId = room.sanityDocumentId || `room-${room.id}`;
+
+    if (action === 'delete') {
+      await sanityClient.delete(sanityId);
+      return { _id: sanityId };
+    }
+
+    let pgSanityId = room.pg.sanityDocumentId;
+
+    if (!pgSanityId) {
+      const syncedPG = await syncPGToSanityDirect(room.pg.id, 'create');
+      pgSanityId = syncedPG._id;
+    }
+
     const sanityDocument = {
       _type: 'room',
-      _id: room.sanityDocumentId || `room-${room.id}`,
+      _id: sanityId,
       dbId: room.id,
       roomNumber: room.roomNumber,
       slug: {
@@ -130,12 +154,13 @@ async function syncRoomToSanityDirect(
       availabilityStatus: room.availabilityStatus.toLowerCase(),
       availableFrom: room.availableFrom?.toISOString(),
       featured: room.featured,
-      pg: room.pg.sanityDocumentId
+      pgReference: pgSanityId
         ? {
             _type: 'reference',
-            _ref: room.pg.sanityDocumentId,
+            _ref: pgSanityId,
           }
         : undefined,
+      pgId: room.pgId,
     };
 
     const result = await sanityClient.createOrReplace(sanityDocument);
@@ -181,14 +206,14 @@ export async function syncToSanity(options: SyncToSanityOptions) {
 
 export async function syncPGToSanity(
   pgId: string,
-  action: 'create' | 'update' = 'create',
+  action: SyncAction = 'create',
 ) {
   return syncToSanity({ type: 'pg', action, id: pgId });
 }
 
 export async function syncRoomToSanity(
   roomId: string,
-  action: 'create' | 'update' = 'create',
+  action: SyncAction = 'create',
 ) {
   return syncToSanity({ type: 'room', action, id: roomId });
 }

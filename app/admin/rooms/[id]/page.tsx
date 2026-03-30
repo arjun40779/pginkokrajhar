@@ -6,13 +6,10 @@ import {
   ArrowLeft,
   Edit,
   Building2,
-  MapPin,
   Users,
   IndianRupee,
   Calendar,
-  Star,
   Eye,
-  BedDouble,
   Wind,
   Bath,
   Home,
@@ -20,10 +17,8 @@ import {
   Phone,
   Mail,
   User,
-  MoreHorizontal,
   Clock,
   CheckCircle,
-  AlertCircle,
   XCircle,
   Shield,
 } from 'lucide-react';
@@ -42,7 +37,6 @@ interface Room {
   hasAttachedBath: boolean;
   hasAC: boolean;
   hasFan: boolean;
-  windowDirection?: string;
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges?: number;
@@ -50,7 +44,6 @@ interface Room {
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   availableFrom?: string;
   isActive: boolean;
-  featured: boolean;
   createdAt: string;
   updatedAt: string;
   pg: {
@@ -87,6 +80,10 @@ interface Booking {
   createdAt: string;
   customerName: string;
   customerPhone: string;
+}
+
+interface RoomDetailsPageProps {
+  params: { id: string };
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -131,9 +128,7 @@ const BookingStatusBadge = ({ status }: { status: string }) => {
 
 export default function RoomDetailsPage({
   params,
-}: {
-  params: { id: string };
-}) {
+}: Readonly<RoomDetailsPageProps>) {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -160,50 +155,54 @@ export default function RoomDetailsPage({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="px-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="space-y-3">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                </div>
+  const renderLoadingState = () => (
+    <div className="px-6">
+      <div className="animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-3 bg-gray-200 rounded"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
               </div>
             </div>
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                </div>
+          </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded"></div>
+                <div className="h-3 bg-gray-200 rounded"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
+
+  const renderMissingRoomState = () => (
+    <div className="px-6">
+      <div className="text-center py-12">
+        <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Room not found
+        </h3>
+        <p className="text-gray-600">
+          This room may have been deleted or moved.
+        </p>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return renderLoadingState();
   }
 
   if (!room) {
-    return (
-      <div className="px-6">
-        <div className="text-center py-12">
-          <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Room not found
-          </h3>
-          <p className="text-gray-600">
-            This room may have been deleted or moved.
-          </p>
-        </div>
-      </div>
-    );
+    return renderMissingRoomState();
   }
 
   const occupancyPercentage = Math.round(
@@ -227,9 +226,6 @@ export default function RoomDetailsPage({
                 Room {room.roomNumber}
               </h1>
               <StatusBadge status={room.availabilityStatus} />
-              {room.featured && (
-                <Star className="h-5 w-5 text-yellow-500 fill-current" />
-              )}
               {!room.isActive && (
                 <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
                   Inactive
@@ -250,7 +246,7 @@ export default function RoomDetailsPage({
 
         <div className="flex items-center space-x-2">
           <Link
-            href={`/admin/rooms/${room.id}/edit`}
+            href={`/admin/rooms/${room.slug}/edit`}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Edit className="h-4 w-4 mr-2" />
@@ -345,16 +341,6 @@ export default function RoomDetailsPage({
                           <dt className="text-sm text-gray-500">Room Size</dt>
                           <dd className="text-sm font-medium text-gray-900">
                             {room.roomSize} sq ft
-                          </dd>
-                        </div>
-                      )}
-                      {room.windowDirection && (
-                        <div>
-                          <dt className="text-sm text-gray-500">
-                            Window Direction
-                          </dt>
-                          <dd className="text-sm font-medium text-gray-900 capitalize">
-                            {room.windowDirection.toLowerCase()}
                           </dd>
                         </div>
                       )}
@@ -629,10 +615,6 @@ export default function RoomDetailsPage({
               <div>
                 <dt className="text-sm text-gray-500">Room ID</dt>
                 <dd className="text-sm font-mono text-gray-900">{room.id}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-500">Slug</dt>
-                <dd className="text-sm font-mono text-gray-900">{room.slug}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Created</dt>

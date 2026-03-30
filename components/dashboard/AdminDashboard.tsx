@@ -10,12 +10,7 @@ import {
   PlusCircle,
   TrendingUp,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +19,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 // Real-time room list: number, price, occupancy
 interface RoomRow {
   id: string;
+  slug: string;
   roomNumber: string;
   roomType: string;
   monthlyRent: string | number;
@@ -110,9 +106,16 @@ export default function AdminDashboard() {
           },
         ].map((s) => {
           const card = (
-            <Card key={s.label} className={s.href ? 'hover:shadow-md cursor-pointer transition-shadow' : ''}>
+            <Card
+              key={s.label}
+              className={
+                s.href ? 'hover:shadow-md cursor-pointer transition-shadow' : ''
+              }
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">{s.label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {s.label}
+                </CardTitle>
                 <s.icon className={`h-4 w-4 ${s.color}`} />
               </CardHeader>
               <CardContent>
@@ -120,7 +123,13 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           );
-          return s.href ? <Link key={s.label} href={s.href}>{card}</Link> : <div key={s.label}>{card}</div>;
+          return s.href ? (
+            <Link key={s.label} href={s.href}>
+              {card}
+            </Link>
+          ) : (
+            <div key={s.label}>{card}</div>
+          );
         })}
       </div>
 
@@ -141,7 +150,8 @@ export default function AdminDashboard() {
         <Link href="/admin/bookings">
           <Button variant="outline" size="sm" className="gap-2">
             <Calendar className="h-4 w-4" />
-            Bookings{stats?.pendingBookings ? ` (${stats.pendingBookings})` : ''}
+            Bookings
+            {stats?.pendingBookings ? ` (${stats.pendingBookings})` : ''}
           </Button>
         </Link>
         <Link href="/admin/inquiries">
@@ -156,13 +166,18 @@ export default function AdminDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Room Inventory</CardTitle>
-          <span className="text-xs text-gray-400">Live · refreshes every 30 s</span>
+          <span className="text-xs text-gray-400">
+            Live · refreshes every 30 s
+          </span>
         </CardHeader>
         <CardContent className="p-0">
           {roomsLoading && (
             <div className="p-6 space-y-2">
               {['r1', 'r2', 'r3', 'r4', 'r5'].map((k) => (
-                <div key={k} className="h-10 bg-gray-100 rounded animate-pulse" />
+                <div
+                  key={k}
+                  className="h-10 bg-gray-100 rounded animate-pulse"
+                />
               ))}
             </div>
           )}
@@ -171,7 +186,9 @@ export default function AdminDashboard() {
               <BedDouble className="h-10 w-10 mx-auto mb-2 text-gray-300" />
               <p>No rooms yet.</p>
               <Link href="/admin/rooms/create">
-                <Button size="sm" className="mt-3">Add First Room</Button>
+                <Button size="sm" className="mt-3">
+                  Add First Room
+                </Button>
               </Link>
             </div>
           )}
@@ -181,11 +198,19 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className="border-b bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                     <th className="text-left px-4 py-3 font-medium">PG</th>
-                    <th className="text-left px-4 py-3 font-medium">Room No.</th>
+                    <th className="text-left px-4 py-3 font-medium">
+                      Room No.
+                    </th>
                     <th className="text-left px-4 py-3 font-medium">Type</th>
-                    <th className="text-right px-4 py-3 font-medium">Price / mo</th>
-                    <th className="text-center px-4 py-3 font-medium">Occupied / Max</th>
-                    <th className="text-center px-4 py-3 font-medium">Status</th>
+                    <th className="text-right px-4 py-3 font-medium">
+                      Price / mo
+                    </th>
+                    <th className="text-center px-4 py-3 font-medium">
+                      Occupied / Max
+                    </th>
+                    <th className="text-center px-4 py-3 font-medium">
+                      Status
+                    </th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -195,8 +220,12 @@ export default function AdminDashboard() {
                       key={room.id}
                       className="border-b hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-4 py-3 text-gray-700">{room.pg.name}</td>
-                      <td className="px-4 py-3 font-semibold">{room.roomNumber}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {room.pg.name}
+                      </td>
+                      <td className="px-4 py-3 font-semibold">
+                        {room.roomNumber}
+                      </td>
                       <td className="px-4 py-3 text-gray-600 capitalize">
                         {room.roomType.toLowerCase()}
                       </td>
@@ -217,15 +246,18 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            STATUS_COLOR[room.availabilityStatus] ?? 'bg-gray-100 text-gray-700'
+                            STATUS_COLOR[room.availabilityStatus] ??
+                            'bg-gray-100 text-gray-700'
                           }`}
                         >
                           {room.availabilityStatus}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/admin/rooms/${room.id}`}>
-                          <Button variant="ghost" size="sm">Edit</Button>
+                        <Link href={`/admin/rooms/${room.slug}`}>
+                          <Button variant="ghost" size="sm">
+                            Edit
+                          </Button>
                         </Link>
                       </td>
                     </tr>
@@ -239,3 +271,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

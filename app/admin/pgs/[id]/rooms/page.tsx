@@ -62,6 +62,10 @@ interface PG {
   availableRooms: number;
 }
 
+interface PGRoomsPageProps {
+  params: { id: string };
+}
+
 const StatusBadge = ({ status }: { status: string }) => {
   const styles = {
     AVAILABLE: 'bg-green-100 text-green-800',
@@ -191,14 +195,14 @@ const RoomCard = ({
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
                 <div className="py-1">
                   <Link
-                    href={`/admin/rooms/${room.id}`}
+                    href={`/admin/rooms/${room.slug}`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Building2 className="h-4 w-4 mr-2" />
                     View Details
                   </Link>
                   <Link
-                    href={`/admin/rooms/${room.id}/edit`}
+                    href={`/admin/rooms/${room.slug}/edit`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Edit className="h-4 w-4 mr-2" />
@@ -242,7 +246,7 @@ const RoomCard = ({
   );
 };
 
-export default function PGRoomsPage({ params }: { params: { id: string } }) {
+export default function PGRoomsPage({ params }: Readonly<PGRoomsPageProps>) {
   const [pg, setPg] = useState<PG | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -542,3 +546,4 @@ export default function PGRoomsPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

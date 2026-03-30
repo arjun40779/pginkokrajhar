@@ -112,27 +112,28 @@ export default function AdminInquiriesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <section className="rounded-[28px] bg-slate-950 px-6 py-8 text-white shadow-xl shadow-slate-950/10 sm:px-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inquiries</h1>
-          <p className="text-gray-600 mt-1">
-            Manage customer inquiries and leads
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+            Lead Pipeline
+          </div>
+          <h2 className="mt-4 text-3xl font-semibold">Inquiries</h2>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Manage customer inquiries and leads with the new admin presentation.
           </p>
         </div>
-      </div>
+      </section>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col md:flex-row gap-4">
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search by name or phone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="border-slate-200 bg-slate-50 pl-10"
               />
             </div>
           </form>
@@ -165,22 +166,22 @@ export default function AdminInquiriesPage() {
           {['iq-a', 'iq-b', 'iq-c', 'iq-d', 'iq-e'].map((id) => (
             <div
               key={id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse"
+              className="animate-pulse rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
             >
-              <div className="h-5 bg-gray-200 rounded w-1/3 mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              <div className="mb-3 h-5 w-1/3 rounded bg-slate-200"></div>
+              <div className="mb-2 h-4 w-1/2 rounded bg-slate-200"></div>
+              <div className="h-4 w-1/4 rounded bg-slate-200"></div>
             </div>
           ))}
         </div>
       )}
       {!loading && inquiries.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <MessageSquare className="mx-auto mb-4 h-12 w-12 text-slate-400" />
+          <h3 className="mb-2 text-lg font-medium text-slate-900">
             No inquiries found
           </h3>
-          <p className="text-gray-600">
+          <p className="text-slate-600">
             Inquiries will appear here as customers submit them.
           </p>
         </div>
@@ -193,12 +194,12 @@ export default function AdminInquiriesPage() {
             return (
               <div
                 key={inquiry.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-lg"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-slate-900">
                         {inquiry.name}
                       </h3>
                       <Badge className={config.color}>
@@ -212,7 +213,7 @@ export default function AdminInquiriesPage() {
                       )}
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
+                    <div className="grid gap-4 text-sm text-slate-600 md:grid-cols-3">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
@@ -303,10 +304,11 @@ export default function AdminInquiriesPage() {
                 size="sm"
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
+                className="rounded-2xl"
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-slate-600">
                 Page {page} of {totalPages}
               </span>
               <Button
@@ -314,6 +316,7 @@ export default function AdminInquiriesPage() {
                 size="sm"
                 disabled={page === totalPages}
                 onClick={() => setPage(page + 1)}
+                className="rounded-2xl"
               >
                 Next
               </Button>

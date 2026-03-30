@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
 import { prisma } from '@/prisma';
+import { buildRoomSlug } from '@/lib/rooms/slug';
+
+const isValidDateTime = (value: string) => !Number.isNaN(Date.parse(value));
 
 const roomUpdateSchema = z.object({
   roomNumber: z.string().min(1, 'Room number is required').optional(),
@@ -24,18 +27,6 @@ const roomUpdateSchema = z.object({
   hasAttachedBath: z.boolean().optional(),
   hasAC: z.boolean().optional(),
   hasFan: z.boolean().optional(),
-  windowDirection: z
-    .enum([
-      'NORTH',
-      'SOUTH',
-      'EAST',
-      'WEST',
-      'NORTHEAST',
-      'NORTHWEST',
-      'SOUTHEAST',
-      'SOUTHWEST',
-    ])
-    .optional(),
 
   // Pricing
   monthlyRent: z.number().positive('Monthly rent must be positive').optional(),
@@ -50,12 +41,89 @@ const roomUpdateSchema = z.object({
   availabilityStatus: z
     .enum(['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'])
     .optional(),
-  availableFrom: z.string().datetime().optional(),
+  availableFrom: z
+    .string()
+    .refine(isValidDateTime, 'Valid availability date is required')
+    .optional(),
 
   // Meta
   isActive: z.boolean().optional(),
-  featured: z.boolean().optional(),
 });
+
+async function findRoomByIdentifier(identifier: string) {
+  return prisma.room.findFirst({
+    where: {
+      OR: [{ id: identifier }, { slug: identifier }],
+    },
+  });
+}
+
+async function createUniqueRoomSlug(
+  pgSlugOrName: string,
+  roomNumber: string,
+  excludeRoomId?: string,
+): Promise<string> {
+  const baseSlug = buildRoomSlug(pgSlugOrName, roomNumber);
+
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existingRoom = await prisma.room.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+
+    if (!existingRoom || existingRoom.id === excludeRoomId) {
+      return slug;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+}
+
+async function getExistingRoom(identifier: string) {
+  const matchedRoom = await findRoomByIdentifier(identifier);
+
+  if (!matchedRoom) {
+    return null;
+  }
+
+  return prisma.room.findUnique({
+    where: { id: matchedRoom.id },
+    include: { pg: true },
+  });
+}
+
+function getPgAvailabilityUpdate(
+  oldStatus: string,
+  newStatus?: string,
+): Record<string, { increment?: number; decrement?: number }> {
+  if (!newStatus || newStatus === oldStatus) {
+    return {};
+  }
+
+  if (
+    (oldStatus === 'OCCUPIED' ||
+      oldStatus === 'MAINTENANCE' ||
+      oldStatus === 'RESERVED') &&
+    newStatus === 'AVAILABLE'
+  ) {
+    return { availableRooms: { increment: 1 } };
+  }
+
+  if (
+    oldStatus === 'AVAILABLE' &&
+    (newStatus === 'OCCUPIED' ||
+      newStatus === 'MAINTENANCE' ||
+      newStatus === 'RESERVED')
+  ) {
+    return { availableRooms: { decrement: 1 } };
+  }
+
+  return {};
+}
 
 // GET /api/admin/rooms/[id] - Get room details
 export async function GET(
@@ -63,36 +131,40 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    const room = await prisma.room.findUnique({
-      where: { id: params.id },
-      include: {
-        pg: true,
-        tenants: {
-          where: { isActive: true },
+    const matchedRoom = await findRoomByIdentifier(params.id);
+
+    const room = matchedRoom
+      ? await prisma.room.findUnique({
+          where: { id: matchedRoom.id },
           include: {
-            user: {
+            pg: true,
+            tenants: {
+              where: { isActive: true },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    mobile: true,
+                    email: true,
+                  },
+                },
+              },
+              orderBy: { moveInDate: 'desc' },
+            },
+            bookings: {
+              orderBy: { createdAt: 'desc' },
+              take: 10,
+            },
+            _count: {
               select: {
-                id: true,
-                name: true,
-                mobile: true,
-                email: true,
+                tenants: { where: { isActive: true } },
+                bookings: true,
               },
             },
           },
-          orderBy: { moveInDate: 'desc' },
-        },
-        bookings: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-        _count: {
-          select: {
-            tenants: { where: { isActive: true } },
-            bookings: true,
-          },
-        },
-      },
-    });
+        })
+      : null;
 
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
@@ -118,10 +190,7 @@ export async function PUT(
     const validatedData = roomUpdateSchema.parse(body);
 
     // Check if room exists
-    const existingRoom = await prisma.room.findUnique({
-      where: { id: params.id },
-      include: { pg: true },
-    });
+    const existingRoom = await getExistingRoom(params.id);
 
     if (!existingRoom) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
@@ -149,39 +218,23 @@ export async function PUT(
       }
     }
 
-    // Handle availability status changes
-    let pgAvailabilityUpdate = {};
-    if (
-      validatedData.availabilityStatus &&
-      validatedData.availabilityStatus !== existingRoom.availabilityStatus
-    ) {
-      const oldStatus = existingRoom.availabilityStatus;
-      const newStatus = validatedData.availabilityStatus;
+    const nextRoomNumber = validatedData.roomNumber ?? existingRoom.roomNumber;
+    const slug = await createUniqueRoomSlug(
+      existingRoom.pg.slug || existingRoom.pg.name,
+      nextRoomNumber,
+      existingRoom.id,
+    );
 
-      // Update PG available rooms count
-      if (
-        (oldStatus === 'OCCUPIED' ||
-          oldStatus === 'MAINTENANCE' ||
-          oldStatus === 'RESERVED') &&
-        newStatus === 'AVAILABLE'
-      ) {
-        // Room becomes available
-        pgAvailabilityUpdate = { availableRooms: { increment: 1 } };
-      } else if (
-        oldStatus === 'AVAILABLE' &&
-        (newStatus === 'OCCUPIED' ||
-          newStatus === 'MAINTENANCE' ||
-          newStatus === 'RESERVED')
-      ) {
-        // Room becomes unavailable
-        pgAvailabilityUpdate = { availableRooms: { decrement: 1 } };
-      }
-    }
+    const pgAvailabilityUpdate = getPgAvailabilityUpdate(
+      existingRoom.availabilityStatus,
+      validatedData.availabilityStatus,
+    );
 
     const updatedRoom = await prisma.room.update({
-      where: { id: params.id },
+      where: { id: existingRoom.id },
       data: {
         ...validatedData,
+        slug,
         availableFrom: validatedData.availableFrom
           ? new Date(validatedData.availableFrom)
           : undefined,
@@ -213,7 +266,7 @@ export async function PUT(
     }
 
     // Sync to Sanity (non-blocking)
-    syncRoomToSanity(params.id, 'update').catch((error) => {
+    syncRoomToSanity(existingRoom.id, 'update').catch((error) => {
       console.error('Failed to sync Room update to Sanity:', error);
     });
 
@@ -242,12 +295,16 @@ export async function DELETE(
 ) {
   try {
     // Check if room exists
-    const existingRoom = await prisma.room.findUnique({
-      where: { id: params.id },
-      include: {
-        tenants: { where: { isActive: true } },
-      },
-    });
+    const existingRoomMatch = await findRoomByIdentifier(params.id);
+
+    const existingRoom = existingRoomMatch
+      ? await prisma.room.findUnique({
+          where: { id: existingRoomMatch.id },
+          include: {
+            tenants: { where: { isActive: true } },
+          },
+        })
+      : null;
 
     if (!existingRoom) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
@@ -264,9 +321,14 @@ export async function DELETE(
       );
     }
 
+    // Sync delete to Sanity (non-blocking, before DB delete so data is available)
+    syncRoomToSanity(existingRoom.id, 'delete').catch((error) => {
+      console.error('Failed to sync Room delete to Sanity:', error);
+    });
+
     // Delete room (hard delete since it's a room, not sensitive data)
     await prisma.room.delete({
-      where: { id: params.id },
+      where: { id: existingRoom.id },
     });
 
     // Update PG available rooms count (decrease total rooms)
@@ -280,9 +342,6 @@ export async function DELETE(
             : undefined,
       },
     });
-
-    // TODO: Trigger webhook to delete/unpublish Sanity document
-
     return NextResponse.json({
       message: 'Room deleted successfully',
     });

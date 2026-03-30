@@ -28,6 +28,7 @@ model PG {
   slug                String             @unique
   description         String?
   isActive            Boolean            @default(true)
+  status              PGStatus           @default(ACTIVE)
   address             String
   area                String
   city                String
@@ -39,20 +40,11 @@ model PG {
   ownerPhone          String
   ownerEmail          String?
   alternatePhone      String?
-  genderRestriction   GenderRestriction  @default(COED)
-  gateClosingTime     String?
-  smokingAllowed      Boolean            @default(false)
-  drinkingAllowed     Boolean            @default(false)
   startingPrice       Decimal
   securityDeposit     Decimal
   brokerageCharges    Decimal?           @default(0)
-  electricityIncluded Boolean            @default(true)
-  waterIncluded       Boolean            @default(true)
-  wifiIncluded        Boolean            @default(true)
   totalRooms          Int
   availableRooms      Int
-  featured            Boolean            @default(false)
-  verificationStatus  VerificationStatus @default(PENDING)
   sanityDocumentId    String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -183,16 +175,10 @@ enum Role {
   OWNER
 }
 
-enum GenderRestriction {
-  BOYS
-  GIRLS
-  COED
-}
-
-enum VerificationStatus {
-  PENDING
-  VERIFIED
-  REJECTED
+enum PGStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
 }
 
 enum RoomType {

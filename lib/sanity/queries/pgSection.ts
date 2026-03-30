@@ -298,6 +298,7 @@ export interface SanityRoom {
   _id: string;
   dbId: string;
   roomNumber: string;
+  title?: string;
   slug: { current: string };
   description?: string;
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';

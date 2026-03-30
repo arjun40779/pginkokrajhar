@@ -11,12 +11,6 @@ import {
   Mail,
   Users,
   IndianRupee,
-  Clock,
-  Shield,
-  Zap,
-  Wifi,
-  Droplets,
-  Star,
   Eye,
   Plus,
   MoreHorizontal,
@@ -38,21 +32,12 @@ interface PG {
   ownerPhone: string;
   ownerEmail?: string;
   alternatePhone?: string;
-  genderRestriction: 'BOYS' | 'GIRLS' | 'COED';
-  gateClosingTime?: string;
-  smokingAllowed: boolean;
-  drinkingAllowed: boolean;
   startingPrice: number;
   securityDeposit: number;
   brokerageCharges: number;
-  electricityIncluded: boolean;
-  waterIncluded: boolean;
-  wifiIncluded: boolean;
   totalRooms: number;
   availableRooms: number;
-  featured: boolean;
   isActive: boolean;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   createdAt: string;
   rooms: Room[];
   bookings: Booking[];
@@ -113,14 +98,9 @@ const StatusBadge = ({
   type,
 }: {
   status: string;
-  type: 'verification' | 'room' | 'booking' | 'inquiry';
+  type: 'room' | 'booking' | 'inquiry';
 }) => {
   const styles = {
-    verification: {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      VERIFIED: 'bg-green-100 text-green-800',
-      REJECTED: 'bg-red-100 text-red-800',
-    },
     room: {
       AVAILABLE: 'bg-green-100 text-green-800',
       OCCUPIED: 'bg-blue-100 text-blue-800',
@@ -249,7 +229,9 @@ const RoomCard = ({
   );
 };
 
-export default function PGDetailsPage({ params }: { params: { id: string } }) {
+export default function PGDetailsPage({
+  params,
+}: Readonly<{ params: { id: string } }>) {
   const [pg, setPg] = useState<PG | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -347,10 +329,6 @@ export default function PGDetailsPage({ params }: { params: { id: string } }) {
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-2xl font-bold text-gray-900">{pg.name}</h1>
-              {pg.featured && (
-                <Star className="h-5 w-5 text-yellow-500 fill-current" />
-              )}
-              <StatusBadge status={pg.verificationStatus} type="verification" />
             </div>
             <div className="flex items-center text-gray-500">
               <MapPin className="h-4 w-4 mr-1" />
@@ -539,56 +517,6 @@ export default function PGDetailsPage({ params }: { params: { id: string } }) {
 
         {/* Sidebar */}
         <div className="space-y-8">
-          {/* Rules & Policies */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Rules & Policies
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Gender
-                </span>
-                <span className="text-sm text-gray-900 capitalize">
-                  {pg.genderRestriction === 'COED'
-                    ? 'Co-ed'
-                    : pg.genderRestriction.toLowerCase()}
-                </span>
-              </div>
-              {pg.gateClosingTime && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">
-                    Gate Closing
-                  </span>
-                  <div className="flex items-center text-sm text-gray-900">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {pg.gateClosingTime}
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Smoking
-                </span>
-                <span
-                  className={`text-sm ${pg.smokingAllowed ? 'text-green-600' : 'text-red-600'}`}
-                >
-                  {pg.smokingAllowed ? 'Allowed' : 'Not Allowed'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Drinking
-                </span>
-                <span
-                  className={`text-sm ${pg.drinkingAllowed ? 'text-green-600' : 'text-red-600'}`}
-                >
-                  {pg.drinkingAllowed ? 'Allowed' : 'Not Allowed'}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* Pricing */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -621,45 +549,6 @@ export default function PGDetailsPage({ params }: { params: { id: string } }) {
                   </span>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Utilities */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Utilities Included
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <Zap
-                  className={`h-4 w-4 mr-2 ${pg.electricityIncluded ? 'text-green-500' : 'text-gray-400'}`}
-                />
-                <span
-                  className={`text-sm ${pg.electricityIncluded ? 'text-gray-900' : 'text-gray-500'}`}
-                >
-                  Electricity
-                </span>
-              </div>
-              <div className="flex items-center">
-                <Droplets
-                  className={`h-4 w-4 mr-2 ${pg.waterIncluded ? 'text-green-500' : 'text-gray-400'}`}
-                />
-                <span
-                  className={`text-sm ${pg.waterIncluded ? 'text-gray-900' : 'text-gray-500'}`}
-                >
-                  Water
-                </span>
-              </div>
-              <div className="flex items-center">
-                <Wifi
-                  className={`h-4 w-4 mr-2 ${pg.wifiIncluded ? 'text-green-500' : 'text-gray-400'}`}
-                />
-                <span
-                  className={`text-sm ${pg.wifiIncluded ? 'text-gray-900' : 'text-gray-500'}`}
-                >
-                  WiFi
-                </span>
-              </div>
             </div>
           </div>
 
@@ -710,3 +599,4 @@ export default function PGDetailsPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

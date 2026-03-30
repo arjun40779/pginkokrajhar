@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/prisma';
 
+function getMonthBuckets(monthCount: number) {
+  const currentDate = new Date();
+
+  return Array.from({ length: monthCount }, (_, index) => {
+    const date = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - (monthCount - 1 - index),
+      1,
+    );
+
+    return {
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+      label: date.toLocaleString('en-IN', { month: 'short' }),
+      start: date,
+      end: new Date(date.getFullYear(), date.getMonth() + 1, 1),
+    };
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient();
@@ -26,6 +45,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const monthBuckets = getMonthBuckets(6);
+    const trendStartDate = monthBuckets[0]?.start ?? new Date();
+
     // Fetch all stats in parallel
     const [
       totalUsers,
@@ -42,6 +64,11 @@ export async function GET(request: NextRequest) {
       completedPayments,
       recentBookings,
       recentInquiries,
+      bookingsForTrend,
+      paymentsForTrend,
+      reservedRooms,
+      maintenanceRooms,
+      vacantRooms,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.pG.count(),
@@ -77,6 +104,32 @@ export async function GET(request: NextRequest) {
           pg: { select: { name: true } },
         },
       }),
+      prisma.booking.findMany({
+        where: {
+          createdAt: {
+            gte: trendStartDate,
+          },
+        },
+        select: {
+          createdAt: true,
+        },
+      }),
+      prisma.payment.findMany({
+        where: {
+          status: 'COMPLETED',
+          paymentDate: {
+            not: null,
+            gte: trendStartDate,
+          },
+        },
+        select: {
+          amount: true,
+          paymentDate: true,
+        },
+      }),
+      prisma.room.count({ where: { availabilityStatus: 'RESERVED' } }),
+      prisma.room.count({ where: { availabilityStatus: 'MAINTENANCE' } }),
+      prisma.room.count({ where: { availabilityStatus: 'VACANT' } }),
     ]);
 
     // Calculate monthly revenue
@@ -87,6 +140,38 @@ export async function GET(request: NextRequest) {
 
     const occupancyRate =
       totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+    const monthlyTrends = monthBuckets.map((bucket) => {
+      const bookings = bookingsForTrend.filter(
+        (booking) =>
+          booking.createdAt >= bucket.start && booking.createdAt < bucket.end,
+      ).length;
+
+      const revenue = paymentsForTrend.reduce((sum, payment) => {
+        if (!payment.paymentDate) {
+          return sum;
+        }
+
+        return payment.paymentDate >= bucket.start &&
+          payment.paymentDate < bucket.end
+          ? sum + Number(payment.amount)
+          : sum;
+      }, 0);
+
+      return {
+        month: bucket.label,
+        bookings,
+        revenue,
+      };
+    });
+
+    const roomStatusBreakdown = [
+      { name: 'Occupied', value: occupiedRooms },
+      { name: 'Available', value: availableRooms },
+      { name: 'Reserved', value: reservedRooms },
+      { name: 'Maintenance', value: maintenanceRooms },
+      { name: 'Vacant', value: vacantRooms },
+    ].filter((item) => item.value > 0);
 
     return NextResponse.json({
       totalUsers,
@@ -104,6 +189,8 @@ export async function GET(request: NextRequest) {
       occupancyRate,
       recentBookings,
       recentInquiries,
+      monthlyTrends,
+      roomStatusBreakdown,
     });
   } catch (error) {
     console.error('Error fetching admin stats:', error);

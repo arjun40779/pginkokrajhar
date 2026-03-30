@@ -3,52 +3,27 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, IndianRupee, MapPin, Phone, Save, X } from 'lucide-react';
 
 interface PGFormData {
   name: string;
-  slug: string;
   description: string;
-
-  // Location
   address: string;
   area: string;
   city: string;
   state: string;
   pincode: string;
-  latitude?: number;
-  longitude?: number;
-
-  // Contact
   ownerName: string;
   ownerPhone: string;
-  ownerEmail?: string;
-  alternatePhone?: string;
-
-  // Rules
-  genderRestriction: 'BOYS' | 'GIRLS' | 'COED';
-  gateClosingTime?: string;
-  smokingAllowed: boolean;
-  drinkingAllowed: boolean;
-
-  // Pricing
+  ownerEmail: string;
+  alternatePhone: string;
   startingPrice: number;
   securityDeposit: number;
   brokerageCharges: number;
-
-  // Utilities
-  electricityIncluded: boolean;
-  waterIncluded: boolean;
-  wifiIncluded: boolean;
-
-  // Meta
-  totalRooms: number;
-  featured: boolean;
 }
 
 const initialFormData: PGFormData = {
   name: '',
-  slug: '',
   description: '',
   address: '',
   area: '',
@@ -59,18 +34,9 @@ const initialFormData: PGFormData = {
   ownerPhone: '',
   ownerEmail: '',
   alternatePhone: '',
-  genderRestriction: 'COED',
-  gateClosingTime: '',
-  smokingAllowed: false,
-  drinkingAllowed: false,
   startingPrice: 0,
   securityDeposit: 0,
   brokerageCharges: 0,
-  electricityIncluded: true,
-  waterIncluded: true,
-  wifiIncluded: true,
-  totalRooms: 1,
-  featured: false,
 };
 
 export default function CreatePGPage() {
@@ -79,12 +45,12 @@ export default function CreatePGPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
+  const formattedStartingPrice = new Intl.NumberFormat('en-IN').format(
+    formData.startingPrice || 0,
+  );
+  const formattedSecurityDeposit = new Intl.NumberFormat('en-IN').format(
+    formData.securityDeposit || 0,
+  );
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -92,25 +58,18 @@ export default function CreatePGPage() {
     >,
   ) => {
     const { name, value, type } = e.target;
-    const newValue =
-      type === 'checkbox'
-        ? (e.target as HTMLInputElement).checked
-        : type === 'number'
-          ? parseFloat(value) || 0
-          : value;
+    let newValue: string | number | boolean = value;
+
+    if (type === 'checkbox') {
+      newValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'number') {
+      newValue = Number.parseFloat(value) || 0;
+    }
 
     setFormData((prev) => ({
       ...prev,
       [name]: newValue,
     }));
-
-    // Auto-generate slug when name changes
-    if (name === 'name' && typeof newValue === 'string') {
-      setFormData((prev) => ({
-        ...prev,
-        slug: generateSlug(newValue),
-      }));
-    }
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -122,14 +81,14 @@ export default function CreatePGPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name) newErrors.name = 'PG name is required';
-    if (!formData.slug) newErrors.slug = 'Slug is required';
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.area) newErrors.area = 'Area is required';
     if (!formData.city) newErrors.city = 'City is required';
     if (!formData.state) newErrors.state = 'State is required';
-    if (!/^\d{6}$/.test(formData.pincode))
+    if (!/^\d{6}$/.test(formData.pincode)) {
       newErrors.pincode = 'Pincode must be 6 digits';
-    if (!formData.ownerName) newErrors.ownerName = 'Owner name is required';
+    }
+    if (!formData.ownerName) newErrors.ownerName = 'Contact name is required';
     if (!formData.ownerPhone || formData.ownerPhone.length < 10) {
       newErrors.ownerPhone = 'Valid phone number is required';
     }
@@ -143,8 +102,6 @@ export default function CreatePGPage() {
       newErrors.startingPrice = 'Starting price must be positive';
     if (formData.securityDeposit <= 0)
       newErrors.securityDeposit = 'Security deposit must be positive';
-    if (formData.totalRooms <= 0)
-      newErrors.totalRooms = 'Total rooms must be positive';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -193,536 +150,381 @@ export default function CreatePGPage() {
   };
 
   return (
-    <div className="px-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Link
-            href="/admin/pgs"
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create New PG</h1>
-            <p className="text-gray-600">
-              Add a new paying guest accommodation
+    <div className="min-h-screen bg-slate-50 px-6 py-8">
+      <div className="mx-auto max-w-3xl">
+        <Link
+          href="/admin/pgs"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to PGs
+        </Link>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-6 md:px-8">
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+              Create PG
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Add pricing, location, and contact details.
             </p>
           </div>
+
+          <form onSubmit={handleSubmit} className="px-6 py-6 md:px-8 md:py-8">
+            <div className="space-y-6">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  PG Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 outline-none transition focus:ring-4 focus:ring-slate-100 ${
+                    errors.name
+                      ? 'border-rose-300 bg-rose-50'
+                      : 'border-slate-200 bg-white focus:border-slate-400'
+                  }`}
+                  placeholder="Sunrise PG"
+                />
+                {errors.name ? (
+                  <p className="mt-2 text-xs font-medium text-rose-600">
+                    {errors.name}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="description"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                  placeholder="Short overview of the PG"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-900">
+                  <MapPin className="h-4 w-4" />
+                  Location
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="address"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Address
+                    </label>
+                    <input
+                      id="address"
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 outline-none transition focus:ring-4 focus:ring-slate-100 ${
+                        errors.address
+                          ? 'border-rose-300 bg-rose-50'
+                          : 'border-slate-200 bg-white focus:border-slate-400'
+                      }`}
+                      placeholder="Full street address"
+                    />
+                    {errors.address ? (
+                      <p className="mt-2 text-xs font-medium text-rose-600">
+                        {errors.address}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {[
+                    {
+                      id: 'area',
+                      label: 'Area',
+                      value: formData.area,
+                      error: errors.area,
+                      placeholder: 'Kokrajhar',
+                    },
+                    {
+                      id: 'city',
+                      label: 'City',
+                      value: formData.city,
+                      error: errors.city,
+                      placeholder: 'Kokrajhar',
+                    },
+                    {
+                      id: 'state',
+                      label: 'State',
+                      value: formData.state,
+                      error: errors.state,
+                      placeholder: 'Assam',
+                    },
+                    {
+                      id: 'pincode',
+                      label: 'Pincode',
+                      value: formData.pincode,
+                      error: errors.pincode,
+                      placeholder: '783370',
+                    },
+                  ].map((field) => (
+                    <div key={field.id}>
+                      <label
+                        htmlFor={field.id}
+                        className="mb-2 block text-sm font-medium text-slate-700"
+                      >
+                        {field.label}
+                      </label>
+                      <input
+                        id={field.id}
+                        type="text"
+                        name={field.id}
+                        value={field.value}
+                        onChange={handleInputChange}
+                        className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 outline-none transition focus:ring-4 focus:ring-slate-100 ${
+                          field.error
+                            ? 'border-rose-300 bg-rose-50'
+                            : 'border-slate-200 bg-white focus:border-slate-400'
+                        }`}
+                        placeholder={field.placeholder}
+                      />
+                      {field.error ? (
+                        <p className="mt-2 text-xs font-medium text-rose-600">
+                          {field.error}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-900">
+                  <Phone className="h-4 w-4" />
+                  Contact
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  {[
+                    {
+                      id: 'ownerName',
+                      label: 'Contact Name',
+                      value: formData.ownerName,
+                      error: errors.ownerName,
+                      placeholder: 'Owner / Manager',
+                    },
+                    {
+                      id: 'ownerPhone',
+                      label: 'Phone',
+                      value: formData.ownerPhone,
+                      error: errors.ownerPhone,
+                      placeholder: '9876543210',
+                    },
+                    {
+                      id: 'ownerEmail',
+                      label: 'Email',
+                      value: formData.ownerEmail,
+                      error: errors.ownerEmail,
+                      placeholder: 'name@example.com',
+                    },
+                    {
+                      id: 'alternatePhone',
+                      label: 'Alternate Phone',
+                      value: formData.alternatePhone,
+                      error: '',
+                      placeholder: 'Optional',
+                    },
+                  ].map((field) => (
+                    <div key={field.id}>
+                      <label
+                        htmlFor={field.id}
+                        className="mb-2 block text-sm font-medium text-slate-700"
+                      >
+                        {field.label}
+                      </label>
+                      <input
+                        id={field.id}
+                        type={
+                          field.id.includes('Email') ||
+                          field.id === 'ownerEmail'
+                            ? 'email'
+                            : 'text'
+                        }
+                        name={field.id}
+                        value={field.value}
+                        onChange={handleInputChange}
+                        className={`w-full rounded-2xl border px-4 py-3 text-base text-slate-900 outline-none transition focus:ring-4 focus:ring-slate-100 ${
+                          field.error
+                            ? 'border-rose-300 bg-rose-50'
+                            : 'border-slate-200 bg-white focus:border-slate-400'
+                        }`}
+                        placeholder={field.placeholder}
+                      />
+                      {field.error ? (
+                        <p className="mt-2 text-xs font-medium text-rose-600">
+                          {field.error}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="startingPrice"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Starting Price
+                  </label>
+                  <div
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition focus-within:ring-4 focus-within:ring-slate-100 ${
+                      errors.startingPrice
+                        ? 'border-rose-300 bg-rose-50'
+                        : 'border-slate-200 bg-white focus-within:border-slate-400'
+                    }`}
+                  >
+                    <IndianRupee className="h-4 w-4 text-slate-400" />
+                    <input
+                      id="startingPrice"
+                      type="number"
+                      name="startingPrice"
+                      value={formData.startingPrice}
+                      onChange={handleInputChange}
+                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
+                      placeholder="8000"
+                      min={0}
+                    />
+                  </div>
+                  {errors.startingPrice ? (
+                    <p className="mt-2 text-xs font-medium text-rose-600">
+                      {errors.startingPrice}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="securityDeposit"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Security Deposit
+                  </label>
+                  <div
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition focus-within:ring-4 focus-within:ring-slate-100 ${
+                      errors.securityDeposit
+                        ? 'border-rose-300 bg-rose-50'
+                        : 'border-slate-200 bg-white focus-within:border-slate-400'
+                    }`}
+                  >
+                    <IndianRupee className="h-4 w-4 text-slate-400" />
+                    <input
+                      id="securityDeposit"
+                      type="number"
+                      name="securityDeposit"
+                      value={formData.securityDeposit}
+                      onChange={handleInputChange}
+                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
+                      placeholder="16000"
+                      min={0}
+                    />
+                  </div>
+                  {errors.securityDeposit ? (
+                    <p className="mt-2 text-xs font-medium text-rose-600">
+                      {errors.securityDeposit}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="brokerageCharges"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Brokerage Charges
+                  </label>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100">
+                    <IndianRupee className="h-4 w-4 text-slate-400" />
+                    <input
+                      id="brokerageCharges"
+                      type="number"
+                      name="brokerageCharges"
+                      value={formData.brokerageCharges}
+                      onChange={handleInputChange}
+                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
+                      placeholder="0"
+                      min={0}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Preview
+                    </p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {formData.name || 'New PG'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-300">
+                      ₹{formattedStartingPrice}
+                    </p>
+                    <p className="text-sm text-slate-400">
+                      Deposit ₹{formattedSecurityDeposit}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
+                <Link
+                  href="/admin/pgs"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Create PG
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Basic Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                PG Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter PG name"
-              />
-              {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL Slug <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.slug ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="pg-url-slug"
-              />
-              {errors.slug && (
-                <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Brief description of the PG"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Location Details */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Location Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Address <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                rows={2}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.address ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter complete address"
-              />
-              {errors.address && (
-                <p className="text-red-500 text-xs mt-1">{errors.address}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Area <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="area"
-                value={formData.area}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.area ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Area/Locality"
-              />
-              {errors.area && (
-                <p className="text-red-500 text-xs mt-1">{errors.area}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.city ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="City"
-              />
-              {errors.city && (
-                <p className="text-red-500 text-xs mt-1">{errors.city}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                State <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.state ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="State"
-              />
-              {errors.state && (
-                <p className="text-red-500 text-xs mt-1">{errors.state}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pincode <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="pincode"
-                value={formData.pincode}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.pincode ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="123456"
-                maxLength={6}
-              />
-              {errors.pincode && (
-                <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Contact Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Owner Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="ownerName"
-                value={formData.ownerName}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.ownerName ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Owner's full name"
-              />
-              {errors.ownerName && (
-                <p className="text-red-500 text-xs mt-1">{errors.ownerName}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                name="ownerPhone"
-                value={formData.ownerPhone}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.ownerPhone ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="9876543210"
-              />
-              {errors.ownerPhone && (
-                <p className="text-red-500 text-xs mt-1">{errors.ownerPhone}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="ownerEmail"
-                value={formData.ownerEmail}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.ownerEmail ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="owner@example.com"
-              />
-              {errors.ownerEmail && (
-                <p className="text-red-500 text-xs mt-1">{errors.ownerEmail}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Alternate Phone
-              </label>
-              <input
-                type="tel"
-                name="alternatePhone"
-                value={formData.alternatePhone}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="9876543210"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Rules & Policies */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Rules & Policies
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gender Restriction
-              </label>
-              <select
-                name="genderRestriction"
-                value={formData.genderRestriction}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="COED">Co-ed (Boys & Girls)</option>
-                <option value="BOYS">Boys Only</option>
-                <option value="GIRLS">Girls Only</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gate Closing Time
-              </label>
-              <input
-                type="time"
-                name="gateClosingTime"
-                value={formData.gateClosingTime}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="smokingAllowed"
-                name="smokingAllowed"
-                checked={formData.smokingAllowed}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="smokingAllowed"
-                className="text-sm font-medium text-gray-700"
-              >
-                Smoking Allowed
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="drinkingAllowed"
-                name="drinkingAllowed"
-                checked={formData.drinkingAllowed}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="drinkingAllowed"
-                className="text-sm font-medium text-gray-700"
-              >
-                Drinking Allowed
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Pricing */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Starting Price (₹) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="startingPrice"
-                value={formData.startingPrice}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.startingPrice ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="5000"
-                min="0"
-              />
-              {errors.startingPrice && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.startingPrice}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Security Deposit (₹) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="securityDeposit"
-                value={formData.securityDeposit}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.securityDeposit ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="10000"
-                min="0"
-              />
-              {errors.securityDeposit && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.securityDeposit}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Brokerage Charges (₹)
-              </label>
-              <input
-                type="number"
-                name="brokerageCharges"
-                value={formData.brokerageCharges}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Utilities & Amenities */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Utilities & Amenities
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="electricityIncluded"
-                name="electricityIncluded"
-                checked={formData.electricityIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="electricityIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                Electricity Included
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="waterIncluded"
-                name="waterIncluded"
-                checked={formData.waterIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="waterIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                Water Included
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="wifiIncluded"
-                name="wifiIncluded"
-                checked={formData.wifiIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="wifiIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                WiFi Included
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Meta Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Meta Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Total Rooms <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="totalRooms"
-                value={formData.totalRooms}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.totalRooms ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="10"
-                min="1"
-              />
-              {errors.totalRooms && (
-                <p className="text-red-500 text-xs mt-1">{errors.totalRooms}</p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="featured"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="featured"
-                className="text-sm font-medium text-gray-700"
-              >
-                Featured PG
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Submit Buttons */}
-        <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-          <Link
-            href="/admin/pgs"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Create PG
-              </>
-            )}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }
+

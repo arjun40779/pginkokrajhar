@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'node:crypto';
 import { prisma } from '@/prisma';
+import { buildRoomSlug, slugifySegment } from '@/lib/rooms/slug';
 
 // Sanity webhook secret - should be stored in environment variables
 const SANITY_WEBHOOK_SECRET = process.env.SANITY_WEBHOOK_SECRET || '';
@@ -46,15 +47,9 @@ interface PGDocument {
   ownerPhone: string;
   ownerEmail?: string;
   alternatePhone?: string;
-  genderRestriction: 'BOYS' | 'GIRLS' | 'COED';
-  gateClosingTime?: string;
-  smokingAllowed: boolean;
-  drinkingAllowed: boolean;
-  electricityIncluded: boolean;
-  waterIncluded: boolean;
-  wifiIncluded: boolean;
-  featured: boolean;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  roomReferences?: Array<{
+    _ref: string;
+  }>;
 }
 
 interface RoomDocument {
@@ -79,6 +74,9 @@ interface RoomDocument {
   pgReference?: {
     _ref: string;
   };
+  pg?: {
+    _ref: string;
+  };
   featured: boolean;
 }
 
@@ -99,11 +97,7 @@ async function generateUniqueSlug(
   name: string,
   type: 'pg' | 'room',
 ): Promise<string> {
-  const baseSlug = name
-    .toLowerCase()
-    .replaceAll(/[^\w\s-]/g, '')
-    .replaceAll(/[\s_-]+/g, '-')
-    .replaceAll(/^-+|-+$/g, '');
+  const baseSlug = slugifySegment(name);
 
   let slug = baseSlug;
   let counter = 1;
@@ -149,15 +143,6 @@ async function syncPGToDatabase(
       ownerPhone: document.ownerPhone,
       ownerEmail: document.ownerEmail || null,
       alternatePhone: document.alternatePhone || null,
-      genderRestriction: document.genderRestriction || 'COED',
-      gateClosingTime: document.gateClosingTime || null,
-      smokingAllowed: document.smokingAllowed || false,
-      drinkingAllowed: document.drinkingAllowed || false,
-      electricityIncluded: document.electricityIncluded !== false,
-      waterIncluded: document.waterIncluded !== false,
-      wifiIncluded: document.wifiIncluded !== false,
-      featured: document.featured || false,
-      verificationStatus: document.verificationStatus || 'PENDING',
       // Default pricing values - these will be managed in the admin panel
       startingPrice: 0,
       securityDeposit: 0,
@@ -205,15 +190,17 @@ async function syncRoomToDatabase(
     // Find the PG by Sanity reference or dbId
     let pgId = document.pgId;
 
-    if (!pgId && document.pgReference?._ref) {
+    const sanityPgReference = document.pgReference?._ref || document.pg?._ref;
+
+    if (!pgId && sanityPgReference) {
       // Try to find PG by Sanity document ID
       const pg = await prisma.pG.findFirst({
-        where: { sanityDocumentId: document.pgReference._ref },
+        where: { sanityDocumentId: sanityPgReference },
       });
 
       if (!pg) {
         throw new Error(
-          `PG not found for Sanity reference: ${document.pgReference._ref}`,
+          `PG not found for Sanity reference: ${sanityPgReference}`,
         );
       }
 
@@ -224,11 +211,22 @@ async function syncRoomToDatabase(
       throw new Error('No PG ID or reference found for room');
     }
 
-    const slug = await generateUniqueSlug(`${document.roomNumber}`, 'room');
+    const pgRecord = await prisma.pG.findUnique({
+      where: { id: pgId },
+      select: { slug: true, name: true },
+    });
+
+    if (!pgRecord) {
+      throw new Error(`PG not found for ID: ${pgId}`);
+    }
+
+    const slug =
+      document.slug?.current ||
+      buildRoomSlug(pgRecord.slug || pgRecord.name, document.roomNumber);
 
     const roomData = {
       roomNumber: document.roomNumber,
-      slug: document.slug?.current || slug,
+      slug,
       description: document.description || null,
       isActive: document.isActive !== false,
       roomType: document.roomType,

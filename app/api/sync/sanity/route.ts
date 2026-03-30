@@ -21,6 +21,13 @@ async function syncPGToSanity(pgId: string, action: 'create' | 'update') {
   try {
     const pg = await prisma.pG.findUnique({
       where: { id: pgId },
+      include: {
+        rooms: {
+          select: {
+            sanityDocumentId: true,
+          },
+        },
+      },
     });
 
     if (!pg) {
@@ -54,20 +61,17 @@ async function syncPGToSanity(pgId: string, action: 'create' | 'update') {
       ownerPhone: pg.ownerPhone,
       ownerEmail: pg.ownerEmail,
       alternatePhone: pg.alternatePhone,
-      genderRestriction: pg.genderRestriction,
-      gateClosingTime: pg.gateClosingTime,
-      smokingAllowed: pg.smokingAllowed,
-      drinkingAllowed: pg.drinkingAllowed,
       startingPrice: Number(pg.startingPrice),
       securityDeposit: Number(pg.securityDeposit),
       brokerageCharges: Number(pg.brokerageCharges),
-      electricityIncluded: pg.electricityIncluded,
-      waterIncluded: pg.waterIncluded,
-      wifiIncluded: pg.wifiIncluded,
       totalRooms: pg.totalRooms,
       availableRooms: pg.availableRooms,
-      featured: pg.featured,
-      verificationStatus: pg.verificationStatus,
+      roomReferences: pg.rooms
+        .filter((room) => room.sanityDocumentId)
+        .map((room) => ({
+          _type: 'reference',
+          _ref: room.sanityDocumentId as string,
+        })),
     };
 
     let result;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,74 +10,129 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  MapPin,
-  Search,
-  Users,
   BedDouble,
   CheckCircle,
+  IndianRupee,
+  MapPin,
   Phone,
+  Search,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { SanityPG } from '@/lib/sanity/queries/pgSection';
+import type { SanityRoomWithPG } from '@/lib/sanity/queries/roomSection';
 
 interface RoomsClientProps {
-  initialPGs: SanityPG[];
+  initialRooms: SanityRoomWithPG[];
 }
 
-const GENDER_LABELS: Record<string, string> = {
-  BOYS: 'Boys Only',
-  GIRLS: 'Girls Only',
-  COED: 'Co-ed',
+const ROOM_TYPE_LABELS: Record<string, string> = {
+  SINGLE: 'Single Sharing',
+  DOUBLE: 'Double Sharing',
+  TRIPLE: 'Triple Sharing',
+  DORMITORY: 'Dormitory',
 };
 
-const GENDER_COLORS: Record<string, string> = {
-  BOYS: 'bg-blue-100 text-blue-800',
-  GIRLS: 'bg-pink-100 text-pink-800',
-  COED: 'bg-purple-100 text-purple-800',
+const STATUS_STYLE: Record<string, string> = {
+  AVAILABLE: 'bg-white/90 text-green-700',
+  OCCUPIED: 'bg-white/90 text-red-700',
+  MAINTENANCE: 'bg-white/90 text-orange-700',
+  RESERVED: 'bg-white/90 text-blue-700',
 };
 
-export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
+export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
   const [search, setSearch] = useState('');
-  const [genderFilter, setGenderFilter] = useState<string>('all');
+  const [roomTypeFilter, setRoomTypeFilter] = useState<string>('all');
   const [inquiryDialog, setInquiryDialog] = useState(false);
-  const [selectedPG, setSelectedPG] = useState<SanityPG | null>(null);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
+  const [selectedRoom, setSelectedRoom] = useState<SanityRoomWithPG | null>(
+    null,
+  );
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    message: '',
+  });
   const [submitting, setSubmitting] = useState(false);
 
-  const filtered = initialPGs.filter((pg) => {
-    const matchSearch =
-      !search ||
-      pg.name.toLowerCase().includes(search.toLowerCase()) ||
-      pg.area.toLowerCase().includes(search.toLowerCase()) ||
-      pg.city.toLowerCase().includes(search.toLowerCase());
-    const matchGender =
-      genderFilter === 'all' || pg.genderRestriction === genderFilter;
-    return matchSearch && matchGender;
-  });
+  const filteredRooms = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-  const handleInquire = (pg: SanityPG) => {
-    setSelectedPG(pg);
+    return initialRooms.filter((room) => {
+      const matchesType =
+        roomTypeFilter === 'all' || room.roomType === roomTypeFilter;
+
+      if (!matchesType) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchableValues = [
+        room.roomNumber,
+        room.title,
+        room.description,
+        room.roomType,
+        ROOM_TYPE_LABELS[room.roomType],
+        room.pgReference?.name,
+        room.pgReference?.area,
+        room.pgReference?.city,
+        ...(room.amenities ?? []),
+        ...(room.features?.map((feature) => feature.name) ?? []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchableValues.includes(normalizedSearch);
+    });
+  }, [initialRooms, roomTypeFilter, search]);
+
+  const handleInquire = (room: SanityRoomWithPG) => {
+    setSelectedRoom(room);
     setInquiryDialog(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPG) return;
+  const selectedRoomLabel = selectedRoom
+    ? selectedRoom.title || `Room ${selectedRoom.roomNumber}`
+    : '';
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!selectedRoom?.pgReference?.dbId) {
+      toast.error('This room is missing a PG reference.');
+      return;
+    }
+
     setSubmitting(true);
+
     try {
-      const res = await fetch('/api/inquiries', {
+      const response = await fetch('/api/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, pgId: selectedPG.dbId }),
+        body: JSON.stringify({
+          ...form,
+          pgId: selectedRoom.pgReference.dbId,
+          message: [form.message, `Room inquiry: ${selectedRoomLabel}`]
+            .filter(Boolean)
+            .join('\n\n'),
+        }),
       });
-      if (!res.ok) throw new Error('Failed to submit');
+
+      if (!response.ok) {
+        throw new Error('Failed to submit');
+      }
+
       toast.success("Inquiry submitted! We'll contact you soon.");
       setInquiryDialog(false);
+      setSelectedRoom(null);
       setForm({ name: '', phone: '', email: '', message: '' });
     } catch {
       toast.error('Failed to submit inquiry. Please try again.');
@@ -87,145 +142,182 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
   };
 
   return (
-    <div className="py-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Find Your Perfect PG
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 text-center">
+          <h1 className="mb-4 text-4xl font-bold text-gray-900">
+            Our Rooms & Accommodation
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Comfortable, affordable paying guest accommodations in the heart of
-            the city
+          <p className="mx-auto max-w-2xl text-lg text-gray-600">
+            Browse all available rooms across our PG properties and find the
+            setup that fits your budget and sharing preference.
           </p>
         </div>
 
-        {/* Search + Filter bar */}
-        <div className="flex flex-wrap gap-3 justify-center mb-8">
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="mb-8 flex flex-wrap justify-center gap-3">
+          <div className="relative w-80 max-w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Search by name, area, or city…"
+              placeholder="Search room type, title, description, PG, area..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
               className="pl-9"
             />
           </div>
-          {['all', 'BOYS', 'GIRLS', 'COED'].map((g) => (
+
+          {['all', 'SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY'].map((type) => (
             <Button
-              key={g}
-              variant={genderFilter === g ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setGenderFilter(g)}
+              key={type}
+              variant={roomTypeFilter === type ? 'default' : 'outline'}
+              onClick={() => setRoomTypeFilter(type)}
+              className="capitalize"
             >
-              {g === 'all' ? 'All' : GENDER_LABELS[g]}
+              {type === 'all' ? 'All Rooms' : ROOM_TYPE_LABELS[type]}
             </Button>
           ))}
         </div>
 
-        {/* Results count */}
-        <p className="text-center text-gray-500 mb-6 text-sm">
-          {filtered.length} accommodation{filtered.length === 1 ? '' : 's'} found
+        <p className="mb-6 text-center text-sm text-gray-500">
+          {filteredRooms.length} room{filteredRooms.length === 1 ? '' : 's'}{' '}
+          found
         </p>
 
-        {/* PG Grid */}
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <BedDouble className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium">No accommodations found</p>
-            <p className="text-sm mt-1">Try adjusting your search or filters</p>
+        {filteredRooms.length === 0 ? (
+          <div className="py-16 text-center text-gray-500">
+            <BedDouble className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <p className="text-lg font-medium">No rooms found</p>
+            <p className="mt-1 text-sm">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {filtered.map((pg) => {
-              const thumb = pg.images?.[0];
-              const imgUrl = thumb?.asset.url;
+          <div className="mb-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredRooms.map((room) => {
+              const thumbnail =
+                room.images?.[0] || room.pgReference?.images?.[0];
+              const imageUrl = thumbnail?.asset.url;
+              const roomLabel = room.title || `Room ${room.roomNumber}`;
+              const pgName = room.pgReference?.name || 'PG Property';
+              const location = [room.pgReference?.area, room.pgReference?.city]
+                .filter(Boolean)
+                .join(', ');
+              const shortAmenities = room.amenities?.slice(0, 4) ?? [];
+
               return (
                 <div
-                  key={pg._id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+                  key={room._id}
+                  className="overflow-hidden rounded-lg bg-white shadow-md transition-shadow hover:shadow-xl"
                 >
-                  {/* Image */}
-                  <div className="relative h-48 bg-gray-100">
-                    {imgUrl ? (
+                  <div className="relative">
+                    {imageUrl ? (
                       <img
-                        src={imgUrl}
-                        alt={thumb?.alt ?? pg.name}
-                        className="w-full h-full object-cover"
+                        src={imageUrl}
+                        alt={thumbnail?.alt ?? roomLabel}
+                        className="h-48 w-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                      <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
                         <BedDouble className="h-16 w-16 text-blue-200" />
                       </div>
                     )}
-                    <div className="absolute top-3 left-3">
-                      <Badge className={GENDER_COLORS[pg.genderRestriction]}>
-                        {GENDER_LABELS[pg.genderRestriction]}
+
+                    <div className="absolute left-3 top-3">
+                      <Badge className="bg-blue-600">
+                        {ROOM_TYPE_LABELS[room.roomType]}
                       </Badge>
                     </div>
-                    {pg.featured && (
-                      <div className="absolute top-3 right-3">
-                        <Badge className="bg-yellow-500 text-white">
-                          Featured
-                        </Badge>
-                      </div>
-                    )}
+
+                    <div className="absolute right-3 top-3">
+                      <Badge
+                        variant="secondary"
+                        className={
+                          STATUS_STYLE[room.availabilityStatus] ??
+                          'bg-white/90 text-gray-700'
+                        }
+                      >
+                        {room.availabilityStatus === 'AVAILABLE' ? (
+                          <span className="flex items-center">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Available
+                          </span>
+                        ) : (
+                          room.availabilityStatus
+                        )}
+                      </Badge>
+                    </div>
                   </div>
 
-                  {/* Info */}
                   <div className="p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 leading-tight">
-                        {pg.name}
-                      </h3>
-                      {pg.verificationStatus === 'VERIFIED' && (
-                        <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 ml-2" />
-                      )}
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          {roomLabel}
+                        </h3>
+                        <p className="mt-1 text-sm font-medium text-gray-500">
+                          {pgName}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center text-gray-500 text-sm mb-3">
-                      <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                      {pg.area}, {pg.city}
-                    </div>
+                    {location ? (
+                      <div className="mb-3 flex items-center text-sm text-gray-500">
+                        <MapPin className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+                        {location}
+                      </div>
+                    ) : null}
 
-                    {pg.description && (
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {pg.description}
+                    {room.description ? (
+                      <p className="mb-4 line-clamp-2 text-sm text-gray-600">
+                        {room.description}
                       </p>
-                    )}
+                    ) : null}
 
-                    {/* Stats row */}
-                    <div className="flex items-center justify-between text-sm mb-4 pt-3 border-t border-gray-50">
-                      <div className="flex items-center gap-1 text-gray-600">
-                        <Users className="h-4 w-4" />
-                        <span>{pg.availableRooms} available</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-gray-400">Starting at</span>
-                        <div className="font-bold text-blue-600 text-base">
-                          ₹{pg.startingPrice.toLocaleString()}
-                          <span className="text-xs text-gray-400 font-normal">
-                            /mo
+                    {shortAmenities.length > 0 ? (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {shortAmenities.map((amenity) => (
+                          <span
+                            key={amenity}
+                            className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                          >
+                            {amenity}
                           </span>
-                        </div>
+                        ))}
+                        {room.amenities && room.amenities.length > 4 ? (
+                          <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                            +{room.amenities.length - 4} more
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <div className="mb-4 flex items-center justify-between border-t pt-4">
+                      <div className="flex items-center text-gray-600">
+                        <Users className="mr-1 h-4 w-4" />
+                        <span className="text-sm">
+                          Up to {room.maxOccupancy} persons
+                        </span>
+                      </div>
+                      <div className="flex items-center text-2xl font-bold text-blue-600">
+                        <IndianRupee className="h-5 w-5" />
+                        {room.monthlyRent.toLocaleString()}
+                        <span className="ml-1 text-sm text-gray-500">
+                          /month
+                        </span>
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        size="sm"
                         className="flex-1"
-                        onClick={() => handleInquire(pg)}
+                        onClick={() => handleInquire(room)}
                       >
-                        <Phone className="h-3.5 w-3.5 mr-1" />
+                        <Phone className="mr-1 h-3.5 w-3.5" />
                         Inquire
                       </Button>
-                      <Link href={`/pg/${pg.dbId}`} className="flex-1">
-                        <Button size="sm" className="w-full">
-                          View Rooms
-                        </Button>
+                      <Link
+                        href={`/rooms/${room.slug.current}`}
+                        className="flex-1"
+                      >
+                        <Button className="w-full">View Room</Button>
                       </Link>
                     </div>
                   </div>
@@ -236,23 +328,27 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
         )}
       </div>
 
-      {/* Inquiry Dialog */}
       <Dialog open={inquiryDialog} onOpenChange={setInquiryDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Inquire about {selectedPG?.name}</DialogTitle>
+            <DialogTitle>Inquire about {selectedRoomLabel}</DialogTitle>
             <DialogDescription>
               We&apos;ll reach out within 24 hours.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <form onSubmit={handleSubmit} className="mt-2 space-y-4">
             <div>
               <Label htmlFor="inq-name">Full Name *</Label>
               <Input
                 id="inq-name"
                 required
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
                 placeholder="Your full name"
               />
             </div>
@@ -263,7 +359,12 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
                 type="tel"
                 required
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    phone: event.target.value,
+                  }))
+                }
                 placeholder="+91 98765 43210"
               />
             </div>
@@ -273,7 +374,12 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
                 id="inq-email"
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
                 placeholder="optional"
               />
             </div>
@@ -283,7 +389,12 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
                 id="inq-msg"
                 rows={3}
                 value={form.message}
-                onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    message: event.target.value,
+                  }))
+                }
                 placeholder="Any specific requirements?"
               />
             </div>
@@ -306,3 +417,4 @@ export function RoomsClient({ initialPGs }: Readonly<RoomsClientProps>) {
     </div>
   );
 }
+

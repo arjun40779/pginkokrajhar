@@ -20,7 +20,7 @@ const tenantSchema = z.object({
   // Tenancy Details
   moveInDate: z.string().datetime('Invalid move-in date'),
   moveOutDate: z.string().datetime().optional().nullable(),
-  rentAmount: z.number().positive('Rent amount must be positive'),
+  rentAmount: z.coerce.number().positive('Rent amount must be positive'),
   rentStatus: z.enum(['PAID', 'PENDING', 'OVERDUE']).default('PENDING'),
   roomId: z.string().min(1, 'Room is required'),
   isActive: z.boolean().default(true),
@@ -184,25 +184,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create or find user
-    let user = null;
-    if (validatedData.createUser) {
-      // Check if user already exists with this phone
-      user = await prisma.user.findUnique({
-        where: { mobile: validatedData.phone },
-      });
-
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            name: validatedData.name,
-            mobile: validatedData.phone,
-            email: validatedData.email ?? null,
-            role: 'TENANT',
+    // Tenant.userId is required, so we always need a linked user record.
+    let user = await prisma.user.findFirst({
+      where: { mobile: validatedData.phone },
+      include: {
+        tenant: {
+          select: {
+            id: true,
           },
-        });
-      }
+        },
+      },
+    });
+
+    if (user?.tenant) {
+      return NextResponse.json(
+        {
+          error:
+            'This phone number is already linked to another tenant account',
+        },
+        { status: 400 },
+      );
     }
+
+    user ??= await prisma.user.create({
+      data: {
+        name: validatedData.name,
+        mobile: validatedData.phone,
+        email: validatedData.email ?? null,
+        role: 'TENANT',
+      },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
 
     // Create tenant
     const tenant = await prisma.tenant.create({
@@ -219,7 +237,7 @@ export async function POST(request: NextRequest) {
         rentAmount: validatedData.rentAmount,
         rentStatus: validatedData.rentStatus,
         roomId: validatedData.roomId,
-        userId: user?.id || '',
+        userId: user.id,
         isActive: validatedData.isActive,
       },
       include: {
