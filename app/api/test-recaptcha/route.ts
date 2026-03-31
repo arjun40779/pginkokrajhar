@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 // Test endpoint to verify reCAPTCHA Enterprise tokens
@@ -58,3 +61,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

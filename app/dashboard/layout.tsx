@@ -1,4 +1,5 @@
 import '../globals.css';
+import { AuthProvider } from '@/lib/auth/AuthContext';
 
 export const metadata = {
   title: 'Dashboard - PG Inkokrajhar',
@@ -12,7 +13,9 @@ export default function DashboardLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
