@@ -11,6 +11,7 @@ import { contactLocationSection } from './document/contactLocationSection';
 import { faqSection } from './document/faqSection';
 import { pgSchema } from './document/pgSchema';
 import { roomSchema } from './document/roomSchema';
+import { roomTypeSchema } from './document/roomTypeSchema';
 
 export const schemaTypes = [
   // Document types
@@ -27,6 +28,7 @@ export const schemaTypes = [
   faqSection,
   pgSchema,
   roomSchema,
+  roomTypeSchema,
   // Object types
 ];
 

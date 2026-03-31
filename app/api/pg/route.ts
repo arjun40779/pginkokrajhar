@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
-// import { auth } from '@/lib/firebase/firebaseAdmin'; // Fix: auth not exported
+import { isRoomAvailableForBooking } from '@/lib/rooms/availability';
 
 // GET /api/pg - List all PGs
 export async function GET(request: NextRequest) {
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
     // Calculate vacancy stats for each PG
     const pgsWithStats = pgs.map((pg) => {
       const totalRooms = pg.rooms.length;
-      const vacantRooms = pg.rooms.filter(
-        (room) => room.availabilityStatus === 'AVAILABLE',
+      const vacantRooms = pg.rooms.filter((room) =>
+        isRoomAvailableForBooking(room.availabilityStatus),
       ).length;
       const occupiedRooms = totalRooms - vacantRooms;
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check authorization header
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         {
           success: false,

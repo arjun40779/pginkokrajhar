@@ -42,6 +42,9 @@ export const pgSchema = defineType({
       title: 'Is Active',
       type: 'boolean',
       initialValue: true,
+      readOnly: true,
+      description:
+        'Status is managed from the admin panel and database - cannot be edited here',
     }),
 
     // Location
@@ -210,6 +213,20 @@ export const pgSchema = defineType({
       description:
         'Availability is managed in database - cannot be edited here',
     }),
+    defineField({
+      name: 'roomReferences',
+      title: 'Room References',
+      type: 'array',
+      of: [
+        {
+          type: 'reference',
+          to: [{ type: 'room' }],
+        },
+      ],
+      readOnly: true,
+      description:
+        'Linked room documents are managed by database sync - cannot be edited here',
+    }),
 
     // Meta
     defineField({
@@ -230,6 +247,9 @@ export const pgSchema = defineType({
         ],
       },
       initialValue: 'PENDING',
+      readOnly: true,
+      description:
+        'Verification status is managed from the admin panel and database - cannot be edited here',
     }),
 
     // Images
@@ -311,9 +331,11 @@ export const pgSchema = defineType({
       isActive: 'isActive',
     },
     prepare({ title, subtitle, media, city, isActive }) {
+      const statusSuffix = isActive ? '' : ' (Inactive)';
+
       return {
         title,
-        subtitle: `${subtitle}, ${city} ${!isActive ? '(Inactive)' : ''}`,
+        subtitle: `${subtitle}, ${city}${statusSuffix}`,
         media,
       };
     },
@@ -337,3 +359,4 @@ export const pgSchema = defineType({
     },
   ],
 });
+

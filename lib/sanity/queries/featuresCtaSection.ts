@@ -115,8 +115,8 @@ export const fallbackCtaCards: CtaCard[] = [
     title: 'Already a Resident?',
     description:
       'Pay your monthly rent online or set up AutoPay for hassle-free automatic payments.',
-    buttonText: 'Resident Portal',
-    buttonUrl: '/resident-portal',
+    buttonText: 'Resident Dashboard',
+    buttonUrl: '/resident',
     buttonIcon: 'ArrowRight',
     cardIcon: 'UserCircle',
     backgroundColor: 'green',

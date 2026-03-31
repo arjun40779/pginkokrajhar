@@ -14,7 +14,6 @@ interface PG {
 
 interface RoomFormData {
   roomNumber: string;
-  slug: string;
   description: string;
   pgId: string;
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
@@ -25,26 +24,15 @@ interface RoomFormData {
   hasAttachedBath: boolean;
   hasAC: boolean;
   hasFan: boolean;
-  windowDirection?:
-    | 'NORTH'
-    | 'SOUTH'
-    | 'EAST'
-    | 'WEST'
-    | 'NORTHEAST'
-    | 'NORTHWEST'
-    | 'SOUTHEAST'
-    | 'SOUTHWEST';
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
   electricityIncluded: boolean;
-  featured: boolean;
   availableFrom?: string;
 }
 
 const initialFormData: RoomFormData = {
   roomNumber: '',
-  slug: '',
   description: '',
   pgId: '',
   roomType: 'SINGLE',
@@ -55,12 +43,10 @@ const initialFormData: RoomFormData = {
   hasAttachedBath: false,
   hasAC: false,
   hasFan: true,
-  windowDirection: undefined,
   monthlyRent: 0,
   securityDeposit: 0,
   maintenanceCharges: 0,
   electricityIncluded: true,
-  featured: false,
   availableFrom: undefined,
 };
 
@@ -69,7 +55,6 @@ export default function CreateRoomPage() {
   const [formData, setFormData] = useState<RoomFormData>(initialFormData);
   const [pgs, setPgs] = useState<PG[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingPGs, setFetchingPGs] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -78,14 +63,11 @@ export default function CreateRoomPage() {
 
   const fetchPGs = async () => {
     try {
-      setFetchingPGs(true);
       const response = await fetch('/api/admin/pgs?limit=100');
       const data = await response.json();
       setPgs(data.pgs);
     } catch (error) {
       console.error('Failed to fetch PGs:', error);
-    } finally {
-      setFetchingPGs(false);
     }
   };
 
@@ -106,21 +88,12 @@ export default function CreateRoomPage() {
       ...prev,
       [name]: type === 'number' ? Number(newValue) : newValue,
     }));
-
-    if (name === 'roomNumber') {
-      const slug = (value as string)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-      setFormData((prev) => ({ ...prev, slug }));
-    }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.roomNumber) newErrors.roomNumber = 'Room number is required';
-    if (!formData.slug) newErrors.slug = 'Slug is required';
     if (!formData.pgId) newErrors.pgId = 'PG selection is required';
     if (!formData.roomType) newErrors.roomType = 'Room type is required';
     if (!formData.maxOccupancy || formData.maxOccupancy <= 0)
@@ -161,6 +134,7 @@ export default function CreateRoomPage() {
         }
       }
     } catch (error) {
+      console.error('Failed to create room:', error);
       setErrors({ general: 'Network error. Please try again.' });
     } finally {
       setLoading(false);
@@ -192,10 +166,14 @@ export default function CreateRoomPage() {
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="roomNumber"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Room Number <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="roomNumber"
                   type="text"
                   name="roomNumber"
                   value={formData.roomNumber}
@@ -213,10 +191,14 @@ export default function CreateRoomPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="pgId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   PG <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="pgId"
                   name="pgId"
                   value={formData.pgId}
                   onChange={handleInputChange}
@@ -237,10 +219,14 @@ export default function CreateRoomPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="roomType"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Room Type <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="roomType"
                   name="roomType"
                   value={formData.roomType}
                   onChange={handleInputChange}
@@ -254,10 +240,14 @@ export default function CreateRoomPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="monthlyRent"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Monthly Rent (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="monthlyRent"
                   type="number"
                   name="monthlyRent"
                   value={formData.monthlyRent}
@@ -309,3 +299,4 @@ export default function CreateRoomPage() {
     </div>
   );
 }
+

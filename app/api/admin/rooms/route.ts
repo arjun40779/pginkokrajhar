@@ -4,12 +4,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
 import { prisma } from '@/prisma';
+import { buildRoomSlug } from '@/lib/rooms/slug';
+
+const isValidDateTime = (value: string) => !Number.isNaN(Date.parse(value));
+const isValidUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 
 const roomCreateSchema = z.object({
   roomNumber: z.string().min(1, 'Room number is required'),
-  slug: z.string().min(1, 'Slug is required'),
   description: z.string().optional(),
-  pgId: z.string().uuid('Valid PG ID is required'),
+  pgId: z.string().refine(isValidUuid, 'Valid PG ID is required'),
 
   // Room Details
   roomType: z.enum(['SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY']),
@@ -22,18 +28,6 @@ const roomCreateSchema = z.object({
   hasAttachedBath: z.boolean().default(false),
   hasAC: z.boolean().default(false),
   hasFan: z.boolean().default(true),
-  windowDirection: z
-    .enum([
-      'NORTH',
-      'SOUTH',
-      'EAST',
-      'WEST',
-      'NORTHEAST',
-      'NORTHWEST',
-      'SOUTHEAST',
-      'SOUTHWEST',
-    ])
-    .optional(),
 
   // Pricing
   monthlyRent: z.number().positive('Monthly rent must be positive'),
@@ -41,10 +35,35 @@ const roomCreateSchema = z.object({
   maintenanceCharges: z.number().default(0),
   electricityIncluded: z.boolean().default(true),
 
-  // Meta
-  featured: z.boolean().default(false),
-  availableFrom: z.string().datetime().optional(),
+  availableFrom: z
+    .string()
+    .refine(isValidDateTime, 'Valid availability date is required')
+    .optional(),
 });
+
+async function createUniqueRoomSlug(
+  pgSlugOrName: string,
+  roomNumber: string,
+): Promise<string> {
+  const baseSlug = buildRoomSlug(pgSlugOrName, roomNumber);
+
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existingRoom = await prisma.room.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+
+    if (!existingRoom) {
+      return slug;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+}
 
 // GET /api/admin/rooms - List all rooms
 export async function GET(request: NextRequest) {
@@ -56,7 +75,6 @@ export async function GET(request: NextRequest) {
     const pgId = searchParams.get('pgId');
     const status = searchParams.get('status'); // available, occupied, maintenance, reserved
     const roomType = searchParams.get('roomType');
-    const featured = searchParams.get('featured');
 
     const skip = (page - 1) * limit;
 
@@ -72,8 +90,6 @@ export async function GET(request: NextRequest) {
     if (pgId) where.pgId = pgId;
     if (status) where.availabilityStatus = status.toUpperCase();
     if (roomType) where.roomType = roomType.toUpperCase();
-    if (featured === 'true') where.featured = true;
-    if (featured === 'false') where.featured = false;
 
     const [rooms, total] = await Promise.all([
       prisma.room.findMany({
@@ -160,22 +176,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if slug already exists
-    const existingSlug = await prisma.room.findUnique({
-      where: { slug: validatedData.slug },
-    });
-
-    if (existingSlug) {
-      return NextResponse.json(
-        { error: 'Room with this slug already exists' },
-        { status: 400 },
-      );
-    }
+    const slug = await createUniqueRoomSlug(
+      pg.slug || pg.name,
+      validatedData.roomNumber,
+    );
 
     // Create room
     const room = await prisma.room.create({
       data: {
         ...validatedData,
+        slug,
         availableFrom: validatedData.availableFrom
           ? new Date(validatedData.availableFrom)
           : null,
@@ -209,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.message },
+        { error: 'Validation failed', details: error.errors },
         { status: 400 },
       );
     }

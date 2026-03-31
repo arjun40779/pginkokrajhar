@@ -8,11 +8,23 @@ import { amenitiesSectionQuery } from './amenitiesSection';
 import { facilitiesSectionQuery } from './facilitiesSection';
 import { featuresCtaSectionQuery } from './featuresCtaSection';
 
+function normalizePageSlug(slug: string): string {
+  let normalizedSlug = slug.trim();
+
+  while (normalizedSlug.endsWith('/')) {
+    normalizedSlug = normalizedSlug.slice(0, -1);
+  }
+
+  return normalizedSlug || '/home';
+}
+
 export async function getPageSection(
   slug: string,
 ): Promise<PageSectionResponse | null> {
   try {
-    const page = await client.fetch(pageQuery, { slug });
+    const page = await client.fetch(pageQuery, {
+      slug: slug,
+    });
     return page;
   } catch (error) {
     console.error('Error fetching page section:', error);

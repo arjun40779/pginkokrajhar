@@ -19,26 +19,17 @@ interface Room {
   hasAttachedBath: boolean;
   hasAC: boolean;
   hasFan: boolean;
-  windowDirection?:
-    | 'NORTH'
-    | 'SOUTH'
-    | 'EAST'
-    | 'WEST'
-    | 'NORTHEAST'
-    | 'NORTHWEST'
-    | 'SOUTHEAST'
-    | 'SOUTHWEST';
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
   electricityIncluded: boolean;
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   availableFrom?: string;
-  featured: boolean;
   isActive: boolean;
   pg: {
     id: string;
     name: string;
+    slug: string;
     area: string;
     city: string;
   };
@@ -46,7 +37,6 @@ interface Room {
 
 interface RoomFormData {
   roomNumber: string;
-  slug: string;
   description: string;
 
   // Room Details
@@ -60,15 +50,6 @@ interface RoomFormData {
   hasAttachedBath: boolean;
   hasAC: boolean;
   hasFan: boolean;
-  windowDirection?:
-    | 'NORTH'
-    | 'SOUTH'
-    | 'EAST'
-    | 'WEST'
-    | 'NORTHEAST'
-    | 'NORTHWEST'
-    | 'SOUTHEAST'
-    | 'SOUTHWEST';
 
   // Pricing
   monthlyRent: number;
@@ -81,13 +62,11 @@ interface RoomFormData {
   availableFrom?: string;
 
   // Meta
-  featured: boolean;
   isActive: boolean;
 }
 
 const initialFormData: RoomFormData = {
   roomNumber: '',
-  slug: '',
   description: '',
   roomType: 'SINGLE',
   maxOccupancy: 1,
@@ -97,18 +76,20 @@ const initialFormData: RoomFormData = {
   hasAttachedBath: false,
   hasAC: false,
   hasFan: true,
-  windowDirection: undefined,
   monthlyRent: 0,
   securityDeposit: 0,
   maintenanceCharges: 0,
   electricityIncluded: true,
   availabilityStatus: 'AVAILABLE',
   availableFrom: undefined,
-  featured: false,
   isActive: true,
 };
 
-export default function EditRoomPage({ params }: { params: { id: string } }) {
+interface EditRoomPageProps {
+  params: { id: string };
+}
+
+export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
   const router = useRouter();
   const [formData, setFormData] = useState<RoomFormData>(initialFormData);
   const [room, setRoom] = useState<Room | null>(null);
@@ -129,7 +110,6 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
         setRoom(roomData);
         setFormData({
           roomNumber: roomData.roomNumber || '',
-          slug: roomData.slug || '',
           description: roomData.description || '',
           roomType: roomData.roomType || 'SINGLE',
           maxOccupancy: roomData.maxOccupancy || 1,
@@ -139,7 +119,6 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
           hasAttachedBath: roomData.hasAttachedBath || false,
           hasAC: roomData.hasAC || false,
           hasFan: roomData.hasFan ?? true,
-          windowDirection: roomData.windowDirection,
           monthlyRent: Number(roomData.monthlyRent) || 0,
           securityDeposit: Number(roomData.securityDeposit) || 0,
           maintenanceCharges: Number(roomData.maintenanceCharges) || 0,
@@ -148,7 +127,6 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
           availableFrom: roomData.availableFrom
             ? new Date(roomData.availableFrom).toISOString().split('T')[0]
             : undefined,
-          featured: roomData.featured || false,
           isActive: roomData.isActive ?? true,
         });
       } else {
@@ -162,34 +140,22 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const generateSlug = (roomNumber: string, pgName: string) => {
-    const pgSlug = pgName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    return `${pgSlug}-${roomNumber}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
     const { name, value, type } = e.target;
-    const newValue =
-      type === 'checkbox'
-        ? (e.target as HTMLInputElement).checked
-        : type === 'number'
-          ? parseFloat(value) || 0
-          : value;
+    let newValue: string | number | boolean | undefined = value;
+
+    if (type === 'checkbox') {
+      newValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'number') {
+      newValue = value === '' ? undefined : Number.parseFloat(value);
+    }
 
     setFormData((prev) => {
       const updated = { ...prev, [name]: newValue };
-
-      // Auto-generate slug when room number changes
-      if (name === 'roomNumber' && room) {
-        updated.slug = generateSlug(updated.roomNumber, room.pg.name);
-      }
 
       // Auto-set occupancy based on room type
       if (name === 'roomType') {
@@ -216,7 +182,6 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
     const newErrors: Record<string, string> = {};
 
     if (!formData.roomNumber) newErrors.roomNumber = 'Room number is required';
-    if (!formData.slug) newErrors.slug = 'Slug is required';
     if (formData.maxOccupancy <= 0)
       newErrors.maxOccupancy = 'Max occupancy must be positive';
     if (formData.monthlyRent <= 0)
@@ -255,7 +220,8 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
       });
 
       if (response.ok) {
-        router.push(`/admin/rooms/${params.id}`);
+        const updatedRoom: Room = await response.json();
+        router.push(`/admin/rooms/${updatedRoom.slug}`);
       } else {
         const error = await response.json();
         if (error.details) {
@@ -316,7 +282,7 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <Link
-            href={`/admin/rooms/${params.id}`}
+            href={`/admin/rooms/${room.slug}`}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -361,10 +327,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="roomNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Room Number <span className="text-red-500">*</span>
               </label>
               <input
+                id="roomNumber"
                 type="text"
                 name="roomNumber"
                 value={formData.roomNumber}
@@ -379,30 +349,15 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL Slug <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.slug ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="room-url-slug"
-              />
-              {errors.slug && (
-                <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
-              )}
-            </div>
-
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Description
               </label>
               <textarea
+                id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
@@ -421,10 +376,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="roomType"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Room Type <span className="text-red-500">*</span>
               </label>
               <select
+                id="roomType"
                 name="roomType"
                 value={formData.roomType}
                 onChange={handleInputChange}
@@ -438,10 +397,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="maxOccupancy"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Max Occupancy <span className="text-red-500">*</span>
               </label>
               <input
+                id="maxOccupancy"
                 type="number"
                 name="maxOccupancy"
                 value={formData.maxOccupancy}
@@ -460,10 +423,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="floor"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Floor <span className="text-red-500">*</span>
               </label>
               <input
+                id="floor"
                 type="number"
                 name="floor"
                 value={formData.floor}
@@ -475,10 +442,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="roomSize"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Room Size (sq ft)
               </label>
               <input
+                id="roomSize"
                 type="number"
                 name="roomSize"
                 value={formData.roomSize || ''}
@@ -490,32 +461,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Window Direction
-              </label>
-              <select
-                name="windowDirection"
-                value={formData.windowDirection || ''}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <label
+                htmlFor="availabilityStatus"
+                className="block text-sm font-medium text-gray-700 mb-1"
               >
-                <option value="">Select direction</option>
-                <option value="NORTH">North</option>
-                <option value="SOUTH">South</option>
-                <option value="EAST">East</option>
-                <option value="WEST">West</option>
-                <option value="NORTHEAST">Northeast</option>
-                <option value="NORTHWEST">Northwest</option>
-                <option value="SOUTHEAST">Southeast</option>
-                <option value="SOUTHWEST">Southwest</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Availability Status
               </label>
               <select
+                id="availabilityStatus"
                 name="availabilityStatus"
                 value={formData.availabilityStatus}
                 onChange={handleInputChange}
@@ -529,10 +482,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="availableFrom"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Available From
               </label>
               <input
+                id="availableFrom"
                 type="date"
                 name="availableFrom"
                 value={formData.availableFrom || ''}
@@ -622,10 +579,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="monthlyRent"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Monthly Rent (₹) <span className="text-red-500">*</span>
               </label>
               <input
+                id="monthlyRent"
                 type="number"
                 name="monthlyRent"
                 value={formData.monthlyRent}
@@ -644,10 +605,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="securityDeposit"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Security Deposit (₹) <span className="text-red-500">*</span>
               </label>
               <input
+                id="securityDeposit"
                 type="number"
                 name="securityDeposit"
                 value={formData.securityDeposit}
@@ -666,10 +631,14 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="maintenanceCharges"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Maintenance Charges (₹)
               </label>
               <input
+                id="maintenanceCharges"
                 type="number"
                 name="maintenanceCharges"
                 value={formData.maintenanceCharges}
@@ -708,23 +677,6 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="featured"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="featured"
-                className="text-sm font-medium text-gray-700"
-              >
-                Featured Room
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
                 id="isActive"
                 name="isActive"
                 checked={formData.isActive}
@@ -744,7 +696,7 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
         {/* Submit Buttons */}
         <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
           <Link
-            href={`/admin/rooms/${params.id}`}
+            href={`/admin/rooms/${room.slug}`}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <X className="h-4 w-4 mr-2" />
@@ -772,3 +724,4 @@ export default function EditRoomPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

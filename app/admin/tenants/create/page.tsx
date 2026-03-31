@@ -8,9 +8,7 @@ import {
   Plus,
   User,
   Phone,
-  Mail,
   Building2,
-  Calendar,
   IndianRupee,
   AlertCircle,
 } from 'lucide-react';
@@ -84,7 +82,14 @@ export default function CreateTenantPage() {
       const response = await fetch(`/api/admin/rooms?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setRooms(data.rooms || []);
+        setRooms(
+          (data.rooms || []).map(
+            (room: Room & { monthlyRent: number | string }) => ({
+              ...room,
+              monthlyRent: Number(room.monthlyRent),
+            }),
+          ),
+        );
       }
     } catch (error) {
       console.error('Failed to fetch rooms:', error);
@@ -99,14 +104,17 @@ export default function CreateTenantPage() {
     >,
   ) => {
     const { name, value, type } = e.target;
+
+    let nextValue: string | number | boolean = value;
+    if (type === 'checkbox') {
+      nextValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'number') {
+      nextValue = Number.parseFloat(value) || 0;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        type === 'checkbox'
-          ? (e.target as HTMLInputElement).checked
-          : type === 'number'
-            ? parseFloat(value) || 0
-            : value,
+      [name]: nextValue,
     }));
 
     // Clear error when user starts typing
@@ -120,7 +128,7 @@ export default function CreateTenantPage() {
       if (selectedRoom) {
         setFormData((prev) => ({
           ...prev,
-          rentAmount: selectedRoom.monthlyRent,
+          rentAmount: Number(selectedRoom.monthlyRent),
         }));
       }
     }

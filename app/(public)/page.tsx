@@ -2,6 +2,8 @@ import { PageRenderer } from '@/components/PageRenderer';
 import { getHomePageSection } from '@/lib/sanity/queries/getPageSection';
 import type { Metadata } from 'next';
 
+export const revalidate = 60;
+
 export default async function HomePage() {
   // Fetch all page data with a single query
   const pageData = await getHomePageSection();

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { rooms } from '../data/roomsData';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -13,12 +13,40 @@ import {
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { CheckCircle, Users, IndianRupee, Wifi, Wind, X } from 'lucide-react';
+import { CheckCircle, Users, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import Image from 'next/image';
+import {
+  formatRoomAvailabilityLabel,
+  isRoomAvailableForBooking,
+} from '@/lib/rooms/availability';
 
-export function Rooms() {
-  const [isClient, setIsClient] = useState(false);
+export type Room = {
+  _id: string;
+  dbId: string;
+  title: string;
+  description: string;
+  roomType: string;
+  maxOccupancy: number;
+  monthlyRent: number;
+  securityDeposit: number;
+  maintenanceCharges: number;
+  featured: boolean;
+  availabilityStatus: string;
+  amenities: string[];
+  slug: {
+    current: string;
+  };
+  heroImage: {
+    asset: {
+      _id: string;
+      url: string;
+    };
+  };
+};
+
+export function Rooms({ data }: { data: Room[] }) {
   const [filterType, setFilterType] = useState<string>('all');
   const [inquiryDialog, setInquiryDialog] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
@@ -28,49 +56,6 @@ export function Rooms() {
     phone: '',
     message: '',
   });
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Show loading skeleton during SSR and initial hydration
-  if (!isClient) {
-    return (
-      <div className="py-8 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <div className="h-10 w-80 bg-gray-200 rounded mx-auto mb-4 animate-pulse"></div>
-            <div className="h-6 w-96 bg-gray-200 rounded mx-auto animate-pulse"></div>
-          </div>
-          <div className="flex flex-wrap gap-3 justify-center mb-8">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-10 w-24 bg-gray-200 rounded animate-pulse"
-              ></div>
-            ))}
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
-              >
-                <div className="h-48 bg-gray-200 animate-pulse"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const filteredRooms =
     filterType === 'all'
@@ -122,48 +107,71 @@ export function Rooms() {
 
         {/* Rooms Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredRooms.map((room) => (
+          {data?.map((room) => (
             <div
-              key={room.id}
+              key={room._id}
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
             >
               {/* Room Image */}
               <div className="relative">
-                <img
-                  src={room.image}
-                  alt={room.name}
+                <Image
+                  src={room?.heroImage?.asset?.url}
+                  alt={room.title}
                   className="w-full h-48 object-cover"
+                  height={192}
+                  width={384}
                 />
                 <div className="absolute top-3 right-3">
-                  <Badge
-                    variant={room.available ? 'default' : 'destructive'}
-                    className="bg-white/90 backdrop-blur-sm"
-                  >
-                    {room.available ? (
-                      <span className="flex items-center text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Available
-                      </span>
-                    ) : (
-                      <span className="text-red-700">Occupied</span>
-                    )}
-                  </Badge>
+                  {(() => {
+                    const isAvailable = isRoomAvailableForBooking(
+                      room.availabilityStatus,
+                    );
+
+                    return (
+                      <Badge
+                        variant={isAvailable ? 'default' : 'destructive'}
+                        className="bg-white/90 backdrop-blur-sm"
+                      >
+                        {isAvailable ? (
+                          <span className="flex items-center text-green-700">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Available
+                          </span>
+                        ) : (
+                          <span className="text-red-700">
+                            {formatRoomAvailabilityLabel(
+                              room.availabilityStatus,
+                            )}
+                          </span>
+                        )}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 <div className="absolute top-3 left-3">
-                  <Badge className="bg-blue-600">{room.type} Sharing</Badge>
+                  <Badge className="bg-blue-600">
+                    {room?.roomType
+                      ? `${room.roomType.charAt(0).toUpperCase()}${room.roomType
+                          .slice(1)
+                          .toLowerCase()}`
+                      : ''}{' '}
+                    Sharing
+                  </Badge>
                 </div>
               </div>
 
               {/* Room Details */}
               <div className="p-5">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {room.name}
+                  {room?.title}
                 </h3>
-                <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+                <p className="text-gray-600 text-sm mb-4">
+                  {room?.description}
+                </p>
 
                 {/* Amenities */}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {room.amenities.slice(0, 4).map((amenity, index) => (
+                  {room?.amenities?.slice(0, 4).map((amenity, index) => (
                     <span
                       key={index}
                       className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
@@ -171,7 +179,7 @@ export function Rooms() {
                       {amenity}
                     </span>
                   ))}
-                  {room.amenities.length > 4 && (
+                  {room?.amenities?.length > 4 && (
                     <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
                       +{room.amenities.length - 4} more
                     </span>
@@ -183,12 +191,12 @@ export function Rooms() {
                   <div className="flex items-center text-gray-600">
                     <Users className="h-4 w-4 mr-1" />
                     <span className="text-sm">
-                      Up to {room.capacity} persons
+                      Up to {room.maxOccupancy} persons
                     </span>
                   </div>
                   <div className="flex items-center text-2xl font-bold text-blue-600">
                     <IndianRupee className="h-5 w-5" />
-                    {room.price.toLocaleString()}
+                    {room.monthlyRent.toLocaleString()}
                     <span className="text-sm text-gray-500 ml-1">/month</span>
                   </div>
                 </div>
@@ -198,13 +206,18 @@ export function Rooms() {
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => handleInquiry(room.id)}
+                    onClick={() => handleInquiry(room._id)}
                   >
                     Inquire
                   </Button>
-                  {room.available ? (
-                    <Link href={`/payment/${room.id}`} className="flex-1">
-                      <Button className="w-full">Book Now</Button>
+                  {room.availabilityStatus.toLowerCase() === 'available' ? (
+                    <Link
+                      href={`rooms/${room.slug.current}`}
+                      className="flex-1"
+                    >
+                      <Button className="w-full bg-black text-white">
+                        Book Now
+                      </Button>
                     </Link>
                   ) : (
                     <Button className="flex-1" disabled>

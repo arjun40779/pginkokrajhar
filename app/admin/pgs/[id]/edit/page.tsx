@@ -7,7 +7,6 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 
 interface PGFormData {
   name: string;
-  slug: string;
   description: string;
 
   // Location
@@ -16,8 +15,6 @@ interface PGFormData {
   city: string;
   state: string;
   pincode: string;
-  latitude?: number;
-  longitude?: number;
 
   // Contact
   ownerName: string;
@@ -25,32 +22,18 @@ interface PGFormData {
   ownerEmail?: string;
   alternatePhone?: string;
 
-  // Rules
-  genderRestriction: 'BOYS' | 'GIRLS' | 'COED';
-  gateClosingTime?: string;
-  smokingAllowed: boolean;
-  drinkingAllowed: boolean;
-
   // Pricing
   startingPrice: number;
   securityDeposit: number;
   brokerageCharges: number;
 
-  // Utilities
-  electricityIncluded: boolean;
-  waterIncluded: boolean;
-  wifiIncluded: boolean;
-
   // Meta
   totalRooms: number;
-  featured: boolean;
   isActive: boolean;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
 }
 
 const initialFormData: PGFormData = {
   name: '',
-  slug: '',
   description: '',
   address: '',
   area: '',
@@ -61,23 +44,16 @@ const initialFormData: PGFormData = {
   ownerPhone: '',
   ownerEmail: '',
   alternatePhone: '',
-  genderRestriction: 'COED',
-  gateClosingTime: '',
-  smokingAllowed: false,
-  drinkingAllowed: false,
   startingPrice: 0,
   securityDeposit: 0,
   brokerageCharges: 0,
-  electricityIncluded: true,
-  waterIncluded: true,
-  wifiIncluded: true,
   totalRooms: 1,
-  featured: false,
   isActive: true,
-  verificationStatus: 'PENDING',
 };
 
-export default function EditPGPage({ params }: { params: { id: string } }) {
+export default function EditPGPage({
+  params,
+}: Readonly<{ params: { id: string } }>) {
   const router = useRouter();
   const [formData, setFormData] = useState<PGFormData>(initialFormData);
   const [loading, setLoading] = useState(true);
@@ -96,33 +72,21 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
         const pg = await response.json();
         setFormData({
           name: pg.name || '',
-          slug: pg.slug || '',
           description: pg.description || '',
           address: pg.address || '',
           area: pg.area || '',
           city: pg.city || '',
           state: pg.state || '',
           pincode: pg.pincode || '',
-          latitude: pg.latitude,
-          longitude: pg.longitude,
           ownerName: pg.ownerName || '',
           ownerPhone: pg.ownerPhone || '',
           ownerEmail: pg.ownerEmail || '',
           alternatePhone: pg.alternatePhone || '',
-          genderRestriction: pg.genderRestriction || 'COED',
-          gateClosingTime: pg.gateClosingTime || '',
-          smokingAllowed: pg.smokingAllowed || false,
-          drinkingAllowed: pg.drinkingAllowed || false,
           startingPrice: Number(pg.startingPrice) || 0,
           securityDeposit: Number(pg.securityDeposit) || 0,
           brokerageCharges: Number(pg.brokerageCharges) || 0,
-          electricityIncluded: pg.electricityIncluded ?? true,
-          waterIncluded: pg.waterIncluded ?? true,
-          wifiIncluded: pg.wifiIncluded ?? true,
           totalRooms: pg.totalRooms || 1,
-          featured: pg.featured || false,
           isActive: pg.isActive ?? true,
-          verificationStatus: pg.verificationStatus || 'PENDING',
         });
       } else {
         router.push('/admin/pgs');
@@ -135,38 +99,24 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
     }
   };
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
     const { name, value, type } = e.target;
-    const newValue =
-      type === 'checkbox'
-        ? (e.target as HTMLInputElement).checked
-        : type === 'number'
-          ? parseFloat(value) || 0
-          : value;
+    let newValue: string | number | boolean = value;
+
+    if (type === 'checkbox') {
+      newValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'number') {
+      newValue = Number.parseFloat(value) || 0;
+    }
 
     setFormData((prev) => ({
       ...prev,
       [name]: newValue,
     }));
-
-    // Auto-generate slug when name changes
-    if (name === 'name' && typeof newValue === 'string') {
-      setFormData((prev) => ({
-        ...prev,
-        slug: generateSlug(newValue),
-      }));
-    }
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -178,7 +128,6 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name) newErrors.name = 'PG name is required';
-    if (!formData.slug) newErrors.slug = 'Slug is required';
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.area) newErrors.area = 'Area is required';
     if (!formData.city) newErrors.city = 'City is required';
@@ -298,10 +247,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 PG Name <span className="text-red-500">*</span>
               </label>
               <input
+                id="name"
                 type="text"
                 name="name"
                 value={formData.name}
@@ -316,30 +269,15 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL Slug <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.slug ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="pg-url-slug"
-              />
-              {errors.slug && (
-                <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
-              )}
-            </div>
-
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Description
               </label>
               <textarea
+                id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
@@ -358,10 +296,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="address"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Full Address <span className="text-red-500">*</span>
               </label>
               <textarea
+                id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
@@ -377,10 +319,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="area"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Area <span className="text-red-500">*</span>
               </label>
               <input
+                id="area"
                 type="text"
                 name="area"
                 value={formData.area}
@@ -396,10 +342,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 City <span className="text-red-500">*</span>
               </label>
               <input
+                id="city"
                 type="text"
                 name="city"
                 value={formData.city}
@@ -415,10 +365,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="state"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 State <span className="text-red-500">*</span>
               </label>
               <input
+                id="state"
                 type="text"
                 name="state"
                 value={formData.state}
@@ -434,10 +388,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="pincode"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Pincode <span className="text-red-500">*</span>
               </label>
               <input
+                id="pincode"
                 type="text"
                 name="pincode"
                 value={formData.pincode}
@@ -462,10 +420,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="ownerName"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Owner Name <span className="text-red-500">*</span>
               </label>
               <input
+                id="ownerName"
                 type="text"
                 name="ownerName"
                 value={formData.ownerName}
@@ -481,10 +443,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="ownerPhone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Phone Number <span className="text-red-500">*</span>
               </label>
               <input
+                id="ownerPhone"
                 type="tel"
                 name="ownerPhone"
                 value={formData.ownerPhone}
@@ -500,10 +466,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="ownerEmail"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Email Address
               </label>
               <input
+                id="ownerEmail"
                 type="email"
                 name="ownerEmail"
                 value={formData.ownerEmail}
@@ -519,10 +489,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="alternatePhone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Alternate Phone
               </label>
               <input
+                id="alternatePhone"
                 type="tel"
                 name="alternatePhone"
                 value={formData.alternatePhone}
@@ -534,86 +508,19 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Rules & Policies */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Rules & Policies
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gender Restriction
-              </label>
-              <select
-                name="genderRestriction"
-                value={formData.genderRestriction}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="COED">Co-ed (Boys & Girls)</option>
-                <option value="BOYS">Boys Only</option>
-                <option value="GIRLS">Girls Only</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gate Closing Time
-              </label>
-              <input
-                type="time"
-                name="gateClosingTime"
-                value={formData.gateClosingTime}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="smokingAllowed"
-                name="smokingAllowed"
-                checked={formData.smokingAllowed}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="smokingAllowed"
-                className="text-sm font-medium text-gray-700"
-              >
-                Smoking Allowed
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="drinkingAllowed"
-                name="drinkingAllowed"
-                checked={formData.drinkingAllowed}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="drinkingAllowed"
-                className="text-sm font-medium text-gray-700"
-              >
-                Drinking Allowed
-              </label>
-            </div>
-          </div>
-        </div>
-
         {/* Pricing */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="startingPrice"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Starting Price (₹) <span className="text-red-500">*</span>
               </label>
               <input
+                id="startingPrice"
                 type="number"
                 name="startingPrice"
                 value={formData.startingPrice}
@@ -632,10 +539,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="securityDeposit"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Security Deposit (₹) <span className="text-red-500">*</span>
               </label>
               <input
+                id="securityDeposit"
                 type="number"
                 name="securityDeposit"
                 value={formData.securityDeposit}
@@ -654,10 +565,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="brokerageCharges"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Brokerage Charges (₹)
               </label>
               <input
+                id="brokerageCharges"
                 type="number"
                 name="brokerageCharges"
                 value={formData.brokerageCharges}
@@ -670,65 +585,6 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Utilities & Amenities */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Utilities & Amenities
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="electricityIncluded"
-                name="electricityIncluded"
-                checked={formData.electricityIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="electricityIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                Electricity Included
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="waterIncluded"
-                name="waterIncluded"
-                checked={formData.waterIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="waterIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                Water Included
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="wifiIncluded"
-                name="wifiIncluded"
-                checked={formData.wifiIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="wifiIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                WiFi Included
-              </label>
-            </div>
-          </div>
-        </div>
-
         {/* Meta Information */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -736,10 +592,14 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="totalRooms"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Total Rooms <span className="text-red-500">*</span>
               </label>
               <input
+                id="totalRooms"
                 type="number"
                 name="totalRooms"
                 value={formData.totalRooms}
@@ -753,39 +613,6 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
               {errors.totalRooms && (
                 <p className="text-red-500 text-xs mt-1">{errors.totalRooms}</p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Verification Status
-              </label>
-              <select
-                name="verificationStatus"
-                value={formData.verificationStatus}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="PENDING">Pending</option>
-                <option value="VERIFIED">Verified</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="featured"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="featured"
-                className="text-sm font-medium text-gray-700"
-              >
-                Featured PG
-              </label>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -838,3 +665,4 @@ export default function EditPGPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

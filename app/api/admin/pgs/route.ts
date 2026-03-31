@@ -7,43 +7,22 @@ import { prisma } from '@/prisma';
 
 const pgCreateSchema = z.object({
   name: z.string().min(1, 'PG name is required'),
-  slug: z.string().min(1, 'Slug is required'),
   description: z.string().optional(),
-
-  // Location
   address: z.string().min(1, 'Address is required'),
   area: z.string().min(1, 'Area is required'),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   pincode: z.string().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-
-  // Contact
   ownerName: z.string().min(1, 'Owner name is required'),
   ownerPhone: z.string().min(10, 'Phone number is required'),
-  ownerEmail: z.string().email().optional().or(z.literal('')),
+  ownerEmail: z.union([z.email(), z.literal('')]).optional(),
   alternatePhone: z.string().optional(),
-
-  // Rules
-  genderRestriction: z.enum(['BOYS', 'GIRLS', 'COED']).default('COED'),
-  gateClosingTime: z.string().optional(),
-  smokingAllowed: z.boolean().default(false),
-  drinkingAllowed: z.boolean().default(false),
-
-  // Pricing
   startingPrice: z.number().positive('Starting price must be positive'),
   securityDeposit: z.number().min(0, 'Security deposit cannot be negative'),
-  brokerageCharges: z.number().default(0),
-
-  // Utilities
-  electricityIncluded: z.boolean().default(true),
-  waterIncluded: z.boolean().default(true),
-  wifiIncluded: z.boolean().default(true),
-
-  // Meta
-  totalRooms: z.number().int().positive('Total rooms must be positive'),
-  featured: z.boolean().default(false),
+  brokerageCharges: z
+    .number()
+    .min(0, 'Brokerage charges cannot be negative')
+    .optional(),
 });
 
 // GET /api/admin/pgs - List all PGs
@@ -54,11 +33,10 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status'); // active, inactive
-    const featured = searchParams.get('featured'); // true, false
-
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    // By default, list PGs that are not archived
+    const where: any = { status: { not: 'ARCHIVED' } };
 
     if (search) {
       where.OR = [
@@ -68,11 +46,8 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    if (status === 'active') where.isActive = true;
-    if (status === 'inactive') where.isActive = false;
-    if (featured === 'true') where.featured = true;
-    if (featured === 'false') where.featured = false;
-
+    if (status === 'active') where.status = 'ACTIVE';
+    if (status === 'inactive') where.status = 'INACTIVE';
     const [pgs, total] = await Promise.all([
       prisma.pG.findMany({
         where,
@@ -112,24 +87,49 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = pgCreateSchema.parse(body);
 
+    const generateSlug = (name: string) =>
+      name
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9]+/g, '-')
+        .replaceAll(/(^-|-$)/g, '');
+
+    const slug = generateSlug(validatedData.name);
+
     // Check if slug already exists
     const existingPG = await prisma.pG.findUnique({
-      where: { slug: validatedData.slug },
+      where: { slug },
     });
 
     if (existingPG) {
       return NextResponse.json(
-        { error: 'PG with this slug already exists' },
+        { error: 'PG with a similar name already exists' },
         { status: 400 },
       );
     }
 
-    // Create PG with available rooms = total rooms initially
+    const defaultTotalRooms = 1;
+
     const pg = await prisma.pG.create({
       data: {
-        ...validatedData,
-        availableRooms: validatedData.totalRooms,
+        name: validatedData.name,
+        slug,
+        description: validatedData.description || null,
+        isActive: true,
+        status: 'ACTIVE',
+        address: validatedData.address,
+        area: validatedData.area,
+        city: validatedData.city,
+        state: validatedData.state,
+        pincode: validatedData.pincode,
+        ownerName: validatedData.ownerName,
+        ownerPhone: validatedData.ownerPhone,
         ownerEmail: validatedData.ownerEmail || null,
+        alternatePhone: validatedData.alternatePhone || null,
+        startingPrice: validatedData.startingPrice,
+        securityDeposit: validatedData.securityDeposit,
+        brokerageCharges: validatedData.brokerageCharges || 0,
+        totalRooms: defaultTotalRooms,
+        availableRooms: defaultTotalRooms,
       },
     });
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.message },
+        { error: 'Validation failed', details: error.issues },
         { status: 400 },
       );
     }

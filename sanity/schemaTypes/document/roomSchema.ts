@@ -12,6 +12,7 @@ export const roomSchema = defineType({
       type: 'string',
       readOnly: true,
       description: 'Auto-generated database ID - cannot be edited',
+      hidden: true,
     }),
 
     // Basic Info
@@ -19,17 +20,22 @@ export const roomSchema = defineType({
       name: 'roomNumber',
       title: 'Room Number',
       type: 'string',
-      validation: (Rule) => Rule.required(),
+      readOnly: true,
+      description: 'Room number is managed in database - cannot be edited here',
     }),
+
     defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
-      options: {
-        source: 'roomNumber',
-        maxLength: 96,
-      },
+      readOnly: true,
       validation: (Rule) => Rule.required(),
+      // hidden: true,
+    }),
+    defineField({
+      name: 'title',
+      title: 'Room Title',
+      type: 'string',
     }),
     defineField({
       name: 'description',
@@ -42,9 +48,11 @@ export const roomSchema = defineType({
       title: 'Is Active',
       type: 'boolean',
       initialValue: true,
+      readOnly: true,
+      description:
+        'Status is managed from the admin panel and database - cannot be edited here',
     }),
 
-    // Room Details
     defineField({
       name: 'roomType',
       title: 'Room Type',
@@ -56,15 +64,16 @@ export const roomSchema = defineType({
           { title: 'Triple', value: 'TRIPLE' },
           { title: 'Dormitory', value: 'DORMITORY' },
         ],
-        layout: 'radio',
       },
-      validation: (Rule) => Rule.required(),
+      // readOnly: true,
+      description: 'Room type is managed in database - cannot be edited here',
     }),
+
     defineField({
       name: 'maxOccupancy',
       title: 'Maximum Occupancy',
       type: 'number',
-      validation: (Rule) => Rule.required().positive().integer(),
+      readOnly: true,
     }),
     defineField({
       name: 'currentOccupancy',
@@ -86,48 +95,35 @@ export const roomSchema = defineType({
       type: 'number',
       validation: (Rule) => Rule.positive(),
     }),
-
-    // Features
     defineField({
       name: 'hasBalcony',
       title: 'Has Balcony',
       type: 'boolean',
-      initialValue: false,
+      readOnly: true,
     }),
     defineField({
       name: 'hasAttachedBath',
       title: 'Has Attached Bath',
       type: 'boolean',
-      initialValue: false,
+      readOnly: true,
     }),
     defineField({
       name: 'hasAC',
-      title: 'Has Air Conditioning',
+      title: 'Has AC',
       type: 'boolean',
-      initialValue: false,
+      readOnly: true,
     }),
     defineField({
       name: 'hasFan',
       title: 'Has Fan',
       type: 'boolean',
-      initialValue: true,
+      readOnly: true,
     }),
     defineField({
       name: 'windowDirection',
       title: 'Window Direction',
       type: 'string',
-      options: {
-        list: [
-          { title: 'North', value: 'NORTH' },
-          { title: 'South', value: 'SOUTH' },
-          { title: 'East', value: 'EAST' },
-          { title: 'West', value: 'WEST' },
-          { title: 'Northeast', value: 'NORTHEAST' },
-          { title: 'Northwest', value: 'NORTHWEST' },
-          { title: 'Southeast', value: 'SOUTHEAST' },
-          { title: 'Southwest', value: 'SOUTHWEST' },
-        ],
-      },
+      readOnly: true,
     }),
 
     // Read-only Pricing (from database)
@@ -151,12 +147,6 @@ export const roomSchema = defineType({
       type: 'number',
       readOnly: true,
       description: 'Charges are managed in database - cannot be edited here',
-    }),
-    defineField({
-      name: 'electricityIncluded',
-      title: 'Electricity Included in Rent',
-      type: 'boolean',
-      initialValue: true,
     }),
 
     // Availability
@@ -183,6 +173,7 @@ export const roomSchema = defineType({
       readOnly: true,
       description:
         'Availability date is managed in database - cannot be edited here',
+      hidden: true,
     }),
 
     // PG Reference
@@ -192,6 +183,8 @@ export const roomSchema = defineType({
       type: 'reference',
       to: [{ type: 'pg' }],
       validation: (Rule) => Rule.required(),
+      hidden: true,
+      readOnly: true,
     }),
     defineField({
       name: 'pgId',
@@ -199,6 +192,7 @@ export const roomSchema = defineType({
       type: 'string',
       readOnly: true,
       description: 'PG ID from database - cannot be edited here',
+      hidden: true,
     }),
 
     // Meta
@@ -209,6 +203,14 @@ export const roomSchema = defineType({
       initialValue: false,
     }),
 
+    defineField({
+      name: 'heroImage',
+      title: 'Hero Image',
+      type: 'image',
+      options: {
+        hotspot: true,
+      },
+    }),
     // Images
     defineField({
       name: 'images',
@@ -235,7 +237,16 @@ export const roomSchema = defineType({
         },
       ],
     }),
-
+    defineField({
+      name: 'amenities',
+      title: 'Amenities',
+      type: 'array',
+      of: [
+        {
+          type: 'string',
+        },
+      ],
+    }),
     // Room Features (detailed)
     defineField({
       name: 'features',
@@ -330,3 +341,4 @@ export const roomSchema = defineType({
     },
   ],
 });
+
