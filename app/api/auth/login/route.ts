@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -16,3 +19,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ user: data.user }, { status: 200 });
 }
+

@@ -85,6 +85,22 @@ interface PGDetails {
   rooms: PGRoom[];
 }
 
+function readSearchParam(
+  searchParams: ReturnType<typeof useSearchParams>,
+  key: string,
+) {
+  const directValue = searchParams.get(key);
+  if (directValue) {
+    return directValue;
+  }
+
+  if (globalThis.window === undefined) {
+    return null;
+  }
+
+  return new URLSearchParams(globalThis.window.location.search).get(key);
+}
+
 function loadRazorpayScript() {
   if (globalThis.window?.Razorpay) {
     return Promise.resolve(true);
@@ -103,8 +119,9 @@ function loadRazorpayScript() {
 export default function BookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pgId = searchParams.get('pgId');
-  const roomId = searchParams.get('roomId');
+  const [resolvedPgId, setResolvedPgId] = useState<string | null>(null);
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(null);
+  const [paramsResolved, setParamsResolved] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +135,15 @@ export default function BookingPage() {
     notes: '',
   });
 
+  useEffect(() => {
+    setResolvedPgId(readSearchParam(searchParams, 'pgId'));
+    setResolvedRoomId(readSearchParam(searchParams, 'roomId'));
+    setParamsResolved(true);
+  }, [searchParams]);
+
+  const pgId = resolvedPgId;
+  const roomId = resolvedRoomId;
+
   const { validation, isLoading: validationLoading } = useBookingValidation(
     pgId,
     roomId,
@@ -125,6 +151,10 @@ export default function BookingPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!paramsResolved) {
+        return;
+      }
+
       if (!pgId) {
         toast.error('PG ID is required');
         router.push('/rooms');
@@ -169,7 +199,7 @@ export default function BookingPage() {
     };
 
     fetchData();
-  }, [pgId, roomId, router]);
+  }, [paramsResolved, pgId, roomId, router]);
 
   const monthlyRent =
     validation?.monthlyRent ?? room?.monthlyRent ?? pg?.pricing.minPrice ?? 0;
@@ -305,6 +335,17 @@ export default function BookingPage() {
       setSubmitting(false);
     }
   };
+
+  if (!paramsResolved) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
+          <p className="text-gray-600">Preparing checkout...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!pgId) {
     return (
@@ -570,3 +611,4 @@ export default function BookingPage() {
     </div>
   );
 }
+
