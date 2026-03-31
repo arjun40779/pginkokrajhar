@@ -51,20 +51,11 @@ export async function GET(
         ownerPhone: true,
         ownerEmail: true,
         alternatePhone: true,
-        genderRestriction: true,
-        gateClosingTime: true,
-        smokingAllowed: true,
-        drinkingAllowed: true,
         startingPrice: true,
         securityDeposit: true,
         brokerageCharges: true,
-        electricityIncluded: true,
-        waterIncluded: true,
-        wifiIncluded: true,
         totalRooms: true,
         availableRooms: true,
-        featured: true,
-        verificationStatus: true,
         createdAt: true,
         rooms: {
           select: {
@@ -169,6 +160,7 @@ export async function GET(
     const pgDetails = {
       id: pg.id,
       name: pg.name,
+      ownerPhone: pg.ownerPhone,
       // Location composite
       location: {
         address: pg.address,
