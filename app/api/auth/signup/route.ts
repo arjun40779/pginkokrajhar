@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
@@ -52,3 +55,4 @@ export async function POST(request: NextRequest) {
     { status: 200 },
   );
 }
+

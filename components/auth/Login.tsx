@@ -9,21 +9,26 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export default function Login() {
+interface LoginProps {
+  nextPath?: string | null;
+  oauthError?: string | null;
+}
+
+export default function Login({
+  nextPath = null,
+  oauthError = null,
+}: Readonly<LoginProps>) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
-  const nextPath = searchParams.get('next') || null;
 
   useEffect(() => {
-    const oauthError = searchParams.get('error');
     if (!oauthError) {
       return;
     }
@@ -43,7 +48,7 @@ export default function Login() {
       default:
         setError('An error occurred during sign-in. Please try again.');
     }
-  }, [searchParams]);
+  }, [oauthError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

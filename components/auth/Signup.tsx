@@ -8,9 +8,15 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export default function Signup() {
+interface SignupProps {
+  nextPath?: string | null;
+}
+
+export default function Signup({
+  nextPath = '/resident',
+}: Readonly<SignupProps>) {
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -20,9 +26,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
-  const nextPath = searchParams.get('next') || '/resident';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
