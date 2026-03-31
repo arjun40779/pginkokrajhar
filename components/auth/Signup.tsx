@@ -64,7 +64,7 @@ export default function Signup({
     }
 
     if (data.session) {
-      router.push(nextPath);
+      router.push(nextPath!);
     }
 
     setLoading(false);
