@@ -33,7 +33,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { SanityPG } from '@/lib/sanity/queries/pgSection';
-import { usePGAvailability, useBookingValidation } from '@/lib/hooks/useAvailability';
+import {
+  usePGAvailability,
+  useBookingValidation,
+} from '@/lib/hooks/useAvailability';
+import {
+  formatRoomAvailabilityLabel,
+  normalizeRoomAvailabilityStatus,
+} from '@/lib/rooms/availability';
 
 interface Props {
   pg: SanityPG;
@@ -55,7 +62,10 @@ const ROOM_TYPE_LABEL: Record<string, string> = {
 };
 
 // Sub-component: validates price + availability before booking
-function BookNowButton({ pgId, roomId }: Readonly<{ pgId: string; roomId: string }>) {
+function BookNowButton({
+  pgId,
+  roomId,
+}: Readonly<{ pgId: string; roomId: string }>) {
   const router = useRouter();
   const { validation, isLoading } = useBookingValidation(pgId, roomId);
 
@@ -99,15 +109,25 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
 
   // Inquiry state
   const [inquiryDialog, setInquiryDialog] = useState(false);
-  const [selectedRoomNumber, setSelectedRoomNumber] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', message: '' });
+  const [selectedRoomNumber, setSelectedRoomNumber] = useState<string | null>(
+    null,
+  );
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    message: '',
+  });
   const [submitting, setSubmitting] = useState(false);
 
   // Merge Sanity room list with real-time availability from backend
   const rooms = pg.rooms ?? [];
   const liveRooms =
-    availability?.rooms.reduce<Record<string, typeof availability.rooms[0]>>(
-      (acc, r) => { acc[r.id] = r; return acc; },
+    availability?.rooms.reduce<Record<string, (typeof availability.rooms)[0]>>(
+      (acc, r) => {
+        acc[r.id] = r;
+        return acc;
+      },
       {},
     ) ?? {};
 
@@ -212,7 +232,10 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
                     {pg.amenities.map((a) => (
-                      <div key={a.name} className="flex items-center gap-2 text-sm">
+                      <div
+                        key={a.name}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         <div
                           className={`w-5 h-5 rounded-full flex items-center justify-center ${
                             a.available
@@ -222,7 +245,13 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                         >
                           <CheckCircle className="h-3 w-3" />
                         </div>
-                        <span className={a.available ? 'text-gray-800' : 'text-gray-400 line-through'}>
+                        <span
+                          className={
+                            a.available
+                              ? 'text-gray-800'
+                              : 'text-gray-400 line-through'
+                          }
+                        >
                           {a.name}
                         </span>
                       </div>
@@ -240,14 +269,28 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4">
                   {[
-                    { icon: <Wifi className="h-5 w-5" />, label: 'WiFi', ok: pg.wifiIncluded },
-                    { icon: <Utensils className="h-5 w-5" />, label: 'Water', ok: pg.waterIncluded },
-                    { icon: <Shield className="h-5 w-5" />, label: 'Electricity', ok: pg.electricityIncluded },
+                    {
+                      icon: <Wifi className="h-5 w-5" />,
+                      label: 'WiFi',
+                      ok: pg.wifiIncluded,
+                    },
+                    {
+                      icon: <Utensils className="h-5 w-5" />,
+                      label: 'Water',
+                      ok: pg.waterIncluded,
+                    },
+                    {
+                      icon: <Shield className="h-5 w-5" />,
+                      label: 'Electricity',
+                      ok: pg.electricityIncluded,
+                    },
                   ].map((u) => (
                     <div
                       key={u.label}
                       className={`flex flex-col items-center p-3 rounded-lg text-sm ${
-                        u.ok ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'
+                        u.ok
+                          ? 'bg-green-50 text-green-700'
+                          : 'bg-gray-50 text-gray-400'
                       }`}
                     >
                       {u.icon}
@@ -324,9 +367,14 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                     {rooms.map((room) => {
                       // Prefer real-time DB status; fall back to Sanity cached value
                       const live = liveRooms[room.dbId];
-                      const status = live?.availabilityStatus ?? room.availabilityStatus;
+                      const status = normalizeRoomAvailabilityStatus(
+                        live?.availabilityStatus ?? room.availabilityStatus,
+                        live?.currentOccupancy ?? room.currentOccupancy,
+                        live?.maxOccupancy ?? room.maxOccupancy,
+                      );
                       const rent = live?.monthlyRent ?? room.monthlyRent;
-                      const deposit = live?.securityDeposit ?? room.securityDeposit;
+                      const deposit =
+                        live?.securityDeposit ?? room.securityDeposit;
 
                       return (
                         <div
@@ -339,13 +387,21 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                                 <h4 className="font-semibold text-gray-900">
                                   Room {room.roomNumber}
                                 </h4>
-                                <Badge className={STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-700'}>
-                                  {status}
+                                <Badge
+                                  className={
+                                    STATUS_STYLE[status] ??
+                                    'bg-gray-100 text-gray-700'
+                                  }
+                                >
+                                  {formatRoomAvailabilityLabel(status)}
                                 </Badge>
                               </div>
                               <p className="text-sm text-gray-500 mt-0.5">
-                                {ROOM_TYPE_LABEL[room.roomType]} · Floor {room.floor}
-                                {room.roomSize ? ` · ${room.roomSize} sq ft` : ''}
+                                {ROOM_TYPE_LABEL[room.roomType]} · Floor{' '}
+                                {room.floor}
+                                {room.roomSize
+                                  ? ` · ${room.roomSize} sq ft`
+                                  : ''}
                               </p>
                             </div>
                             <div className="text-right">
@@ -361,19 +417,25 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                           {/* Features */}
                           <div className="flex flex-wrap gap-2 mb-3">
                             {room.hasAC && (
-                              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">AC</span>
+                              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                                AC
+                              </span>
                             )}
                             {room.hasBalcony && (
-                              <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">Balcony</span>
+                              <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded">
+                                Balcony
+                              </span>
                             )}
                             {room.hasAttachedBath && (
                               <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                <Bath className="h-3 w-3" />Attached Bath
+                                <Bath className="h-3 w-3" />
+                                Attached Bath
                               </span>
                             )}
                             {room.hasFan && (
                               <span className="text-xs bg-gray-50 text-gray-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                <Wind className="h-3 w-3" />Fan
+                                <Wind className="h-3 w-3" />
+                                Fan
                               </span>
                             )}
                             <span className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded flex items-center gap-1">
@@ -513,7 +575,9 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                 id="inq-name"
                 required
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -523,7 +587,9 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                 type="tel"
                 required
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -532,7 +598,9 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                 id="inq-email"
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -541,7 +609,9 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                 id="inq-msg"
                 rows={3}
                 value={form.message}
-                onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, message: e.target.value }))
+                }
                 placeholder="Any specific requirements?"
               />
             </div>
@@ -564,3 +634,4 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
     </div>
   );
 }
+

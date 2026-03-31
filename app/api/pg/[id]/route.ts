@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
+import {
+  isRoomAvailableForBooking,
+  normalizeRoomAvailabilityStatus,
+} from '@/lib/rooms/availability';
 
 // GET /api/pg/[id] - Get PG details by ID
 export async function GET(
@@ -107,13 +111,29 @@ export async function GET(
 
     // Calculate room statistics
     const totalRooms = pg.rooms.length;
-    const vacantRooms = pg.rooms.filter(
-      (room) => room.availabilityStatus === 'VACANT',
+    const normalizedRooms = pg.rooms.map((room) => ({
+      ...room,
+      availabilityStatus: normalizeRoomAvailabilityStatus(
+        room.availabilityStatus,
+        room.currentOccupancy,
+        room.maxOccupancy,
+      ),
+      monthlyRent: Number(room.monthlyRent),
+      securityDeposit: Number(room.securityDeposit),
+      maintenanceCharges: Number(room.maintenanceCharges),
+    }));
+
+    const vacantRooms = normalizedRooms.filter((room) =>
+      isRoomAvailableForBooking(
+        room.availabilityStatus,
+        room.currentOccupancy,
+        room.maxOccupancy,
+      ),
     ).length;
     const occupiedRooms = totalRooms - vacantRooms;
 
     // Group rooms by type for better organization
-    const roomsByType = pg.rooms.reduce(
+    const roomsByType = normalizedRooms.reduce(
       (acc, room) => {
         if (!acc[room.roomType]) {
           acc[room.roomType] = [];
@@ -125,7 +145,7 @@ export async function GET(
     );
 
     // Calculate price range
-    const prices = pg.rooms.map((room) => Number(room.monthlyRent));
+    const prices = normalizedRooms.map((room) => Number(room.monthlyRent));
     const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
     const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
@@ -176,7 +196,7 @@ export async function GET(
             ? `₹${minPrice}`
             : `₹${minPrice} - ₹${maxPrice}`,
       },
-      rooms: pg.rooms,
+      rooms: normalizedRooms,
       roomsByType,
     };
 

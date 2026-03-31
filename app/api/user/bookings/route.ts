@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/prisma';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = createClient();
     const {
@@ -29,26 +29,34 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!tenant) {
-      return NextResponse.json({ bookings: [], tenant: null });
+    const bookingFilters = [];
+
+    if (user.email) {
+      bookingFilters.push({ customerEmail: user.email });
     }
 
-    // Get user's bookings
-    const bookings = await prisma.booking.findMany({
-      where: {
-        OR: [{ customerEmail: authUser.email }, { roomId: tenant.roomId }],
-      },
-      include: {
-        room: {
-          include: {
-            pg: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    if (tenant?.roomId) {
+      bookingFilters.push({ roomId: tenant.roomId });
+    }
+
+    const bookings =
+      bookingFilters.length > 0
+        ? await prisma.booking.findMany({
+            where: {
+              OR: bookingFilters,
+            },
+            include: {
+              room: {
+                include: {
+                  pg: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          })
+        : [];
 
     return NextResponse.json({
       tenant,

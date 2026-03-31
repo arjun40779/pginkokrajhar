@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
+import {
+  isRoomAvailableForBooking,
+  normalizeRoomAvailabilityStatus,
+} from '@/lib/rooms/availability';
 
 // GET /api/pg/[id]/availability - Real-time room availability for a PG
 // Used by SWR for client-side caching, called on customer-facing pages
@@ -36,16 +40,29 @@ export async function GET(
       return NextResponse.json({ error: 'PG not found' }, { status: 404 });
     }
 
+    const rooms = pg.rooms.map((room) => ({
+      ...room,
+      availabilityStatus: normalizeRoomAvailabilityStatus(
+        room.availabilityStatus,
+        room.currentOccupancy,
+        room.maxOccupancy,
+      ),
+      monthlyRent: Number(room.monthlyRent),
+      securityDeposit: Number(room.securityDeposit),
+      maintenanceCharges: Number(room.maintenanceCharges),
+    }));
+
     return NextResponse.json({
       id: pg.id,
-      totalRooms: pg.totalRooms,
-      availableRooms: pg.availableRooms,
-      rooms: pg.rooms.map((room) => ({
-        ...room,
-        monthlyRent: Number(room.monthlyRent),
-        securityDeposit: Number(room.securityDeposit),
-        maintenanceCharges: Number(room.maintenanceCharges),
-      })),
+      totalRooms: rooms.length,
+      availableRooms: rooms.filter((room) =>
+        isRoomAvailableForBooking(
+          room.availabilityStatus,
+          room.currentOccupancy,
+          room.maxOccupancy,
+        ),
+      ).length,
+      rooms,
     });
   } catch (error) {
     console.error('Error fetching PG availability:', error);
@@ -55,3 +72,4 @@ export async function GET(
     );
   }
 }
+

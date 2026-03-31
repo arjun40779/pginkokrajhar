@@ -17,6 +17,10 @@ import { CheckCircle, Users, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import Image from 'next/image';
+import {
+  formatRoomAvailabilityLabel,
+  isRoomAvailableForBooking,
+} from '@/lib/rooms/availability';
 
 export type Room = {
   _id: string;
@@ -118,23 +122,31 @@ export function Rooms({ data }: { data: Room[] }) {
                   width={384}
                 />
                 <div className="absolute top-3 right-3">
-                  <Badge
-                    variant={
-                      room.availabilityStatus === 'AVAILABLE'
-                        ? 'default'
-                        : 'destructive'
-                    }
-                    className="bg-white/90 backdrop-blur-sm"
-                  >
-                    {room?.availabilityStatus?.toLowerCase() === 'available' ? (
-                      <span className="flex items-center text-green-700">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Available
-                      </span>
-                    ) : (
-                      <span className="text-red-700">Occupied</span>
-                    )}
-                  </Badge>
+                  {(() => {
+                    const isAvailable = isRoomAvailableForBooking(
+                      room.availabilityStatus,
+                    );
+
+                    return (
+                      <Badge
+                        variant={isAvailable ? 'default' : 'destructive'}
+                        className="bg-white/90 backdrop-blur-sm"
+                      >
+                        {isAvailable ? (
+                          <span className="flex items-center text-green-700">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Available
+                          </span>
+                        ) : (
+                          <span className="text-red-700">
+                            {formatRoomAvailabilityLabel(
+                              room.availabilityStatus,
+                            )}
+                          </span>
+                        )}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 <div className="absolute top-3 left-3">
                   <Badge className="bg-blue-600">

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
+import {
+  isRoomAvailableForBooking,
+  normalizeRoomAvailabilityStatus,
+} from '@/lib/rooms/availability';
 
 // GET /api/bookings/validate - Real-time price & availability check from backend
 export async function GET(request: NextRequest) {
@@ -44,10 +48,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (!room) {
-        return NextResponse.json(
-          { error: 'Room not found' },
-          { status: 404 },
-        );
+        return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       }
 
       return NextResponse.json({
@@ -60,9 +61,17 @@ export async function GET(request: NextRequest) {
           maintenanceCharges: Number(room.maintenanceCharges),
           maxOccupancy: room.maxOccupancy,
           currentOccupancy: room.currentOccupancy,
-          availabilityStatus: room.availabilityStatus,
+          availabilityStatus: normalizeRoomAvailabilityStatus(
+            room.availabilityStatus,
+            room.currentOccupancy,
+            room.maxOccupancy,
+          ),
           electricityIncluded: room.electricityIncluded,
-          isAvailable: room.availabilityStatus === 'AVAILABLE',
+          isAvailable: isRoomAvailableForBooking(
+            room.availabilityStatus,
+            room.currentOccupancy,
+            room.maxOccupancy,
+          ),
           spotsLeft: room.maxOccupancy - room.currentOccupancy,
         },
         pg: room.pg
@@ -95,10 +104,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (!pg) {
-        return NextResponse.json(
-          { error: 'PG not found' },
-          { status: 404 },
-        );
+        return NextResponse.json({ error: 'PG not found' }, { status: 404 });
       }
 
       const roomSummary = await prisma.room.groupBy({
@@ -110,7 +116,7 @@ export async function GET(request: NextRequest) {
       });
 
       const availableRooms = await prisma.room.findMany({
-        where: { pgId, availabilityStatus: 'AVAILABLE' },
+        where: { pgId },
         select: {
           id: true,
           roomNumber: true,
@@ -123,6 +129,14 @@ export async function GET(request: NextRequest) {
         orderBy: { monthlyRent: 'asc' },
       });
 
+      const bookableRooms = availableRooms.filter((room) =>
+        isRoomAvailableForBooking(
+          room.availabilityStatus,
+          room.currentOccupancy,
+          room.maxOccupancy,
+        ),
+      );
+
       return NextResponse.json({
         pg: {
           id: pg.id,
@@ -131,7 +145,7 @@ export async function GET(request: NextRequest) {
           securityDeposit: Number(pg.securityDeposit),
           brokerageCharges: Number(pg.brokerageCharges),
           totalRooms: pg.totalRooms,
-          availableRooms: pg.availableRooms,
+          availableRooms: bookableRooms.length,
         },
         roomSummary: roomSummary.map((s) => ({
           roomType: s.roomType,
@@ -140,7 +154,7 @@ export async function GET(request: NextRequest) {
           minRent: s._min.monthlyRent ? Number(s._min.monthlyRent) : 0,
           maxRent: s._max.monthlyRent ? Number(s._max.monthlyRent) : 0,
         })),
-        availableRooms: availableRooms.map((r) => ({
+        availableRooms: bookableRooms.map((r) => ({
           id: r.id,
           roomNumber: r.roomNumber,
           roomType: r.roomType,
@@ -161,3 +175,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

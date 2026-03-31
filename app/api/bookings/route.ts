@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/prisma';
+import {
+  formatRoomAvailabilityLabel,
+  isRoomAvailableForBooking,
+} from '@/lib/rooms/availability';
 
 const bookingCreateSchema = z.object({
   customerName: z.string().min(1, 'Customer name is required'),
@@ -40,6 +44,8 @@ export async function POST(request: NextRequest) {
           monthlyRent: true,
           securityDeposit: true,
           availabilityStatus: true,
+          currentOccupancy: true,
+          maxOccupancy: true,
           pgId: true,
           pg: {
             select: {
@@ -55,9 +61,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       }
 
-      if (room.availabilityStatus !== 'AVAILABLE') {
+      if (
+        !isRoomAvailableForBooking(
+          room.availabilityStatus,
+          room.currentOccupancy,
+          room.maxOccupancy,
+        )
+      ) {
         return NextResponse.json(
-          { error: 'Room is not available for booking' },
+          {
+            error: `Room is currently ${formatRoomAvailabilityLabel(
+              room.availabilityStatus,
+              room.currentOccupancy,
+              room.maxOccupancy,
+            ).toLowerCase()}`,
+          },
           { status: 400 },
         );
       }

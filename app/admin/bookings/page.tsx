@@ -5,18 +5,17 @@ import {
   Search,
   Calendar,
   Phone,
-  User,
   CheckCircle,
   XCircle,
   Clock,
   Building2,
   BedDouble,
   IndianRupee,
+  Mail,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 
 interface Booking {
   id: string;
@@ -46,10 +45,26 @@ interface Booking {
 }
 
 const statusConfig = {
-  PENDING: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  CONFIRMED: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  CANCELLED: { color: 'bg-red-100 text-red-800', icon: XCircle },
-  COMPLETED: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+  PENDING: {
+    color: 'bg-yellow-100 text-yellow-800',
+    icon: Clock,
+    label: 'Pending',
+  },
+  CONFIRMED: {
+    color: 'bg-green-100 text-green-800',
+    icon: CheckCircle,
+    label: 'Confirmed',
+  },
+  CANCELLED: {
+    color: 'bg-red-100 text-red-800',
+    icon: XCircle,
+    label: 'Cancelled',
+  },
+  COMPLETED: {
+    color: 'bg-blue-100 text-blue-800',
+    icon: CheckCircle,
+    label: 'Completed',
+  },
 };
 
 export default function AdminBookingsPage() {
@@ -110,33 +125,27 @@ export default function AdminBookingsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[28px] bg-slate-950 px-6 py-8 text-white shadow-xl shadow-slate-950/10 sm:px-8">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
-            Booking Operations
-          </div>
-          <h2 className="mt-4 text-3xl font-semibold">Bookings</h2>
-          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
-            Manage booking requests and reservations with the refreshed admin
-            workspace.
-          </p>
-        </div>
-      </section>
+      <div>
+        <h2 className="text-2xl font-semibold text-gray-900">Bookings</h2>
+        <p className="text-gray-500 mt-1">
+          Manage booking requests and reservations across your properties
+        </p>
+      </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col md:flex-row gap-4">
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search by name or phone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border-slate-200 bg-slate-50 pl-10"
+                className="border-gray-200 bg-gray-50 pl-10"
               />
             </div>
           </form>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {['all', 'PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'].map(
               (status) => (
                 <Button
@@ -148,7 +157,9 @@ export default function AdminBookingsPage() {
                     setPage(1);
                   }}
                 >
-                  {status === 'all' ? 'All' : status}
+                  {status === 'all'
+                    ? 'All'
+                    : statusConfig[status as keyof typeof statusConfig].label}
                 </Button>
               ),
             )}
@@ -162,22 +173,22 @@ export default function AdminBookingsPage() {
           {['bk-a', 'bk-b', 'bk-c', 'bk-d', 'bk-e'].map((id) => (
             <div
               key={id}
-              className="animate-pulse rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+              className="animate-pulse rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
             >
-              <div className="mb-3 h-5 w-1/3 rounded bg-slate-200"></div>
-              <div className="mb-2 h-4 w-1/2 rounded bg-slate-200"></div>
-              <div className="h-4 w-1/4 rounded bg-slate-200"></div>
+              <div className="mb-3 h-5 w-1/3 rounded bg-gray-200"></div>
+              <div className="mb-2 h-4 w-1/2 rounded bg-gray-200"></div>
+              <div className="h-4 w-1/4 rounded bg-gray-200"></div>
             </div>
           ))}
         </div>
       )}
       {!loading && bookings.length === 0 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <Calendar className="mx-auto mb-4 h-12 w-12 text-slate-400" />
-          <h3 className="mb-2 text-lg font-medium text-slate-900">
+        <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <Calendar className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+          <h3 className="mb-2 text-lg font-medium text-gray-900">
             No bookings found
           </h3>
-          <p className="text-slate-600">
+          <p className="text-gray-600">
             Bookings will appear here as customers make reservations.
           </p>
         </div>
@@ -185,44 +196,43 @@ export default function AdminBookingsPage() {
       {!loading && bookings.length > 0 && (
         <div className="space-y-4">
           {bookings.map((booking) => {
-            const StatusIcon = statusConfig[booking.status]?.icon || Clock;
+            const status = statusConfig[booking.status] || statusConfig.PENDING;
+            const StatusIcon = status.icon;
+
             return (
               <div
                 key={booking.id}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-lg"
+                className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-slate-900">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
                         {booking.customerName}
                       </h3>
-                      <Badge
-                        className={
-                          statusConfig[booking.status]?.color ||
-                          'bg-gray-100 text-gray-800'
-                        }
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${status.color}`}
                       >
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {booking.status}
-                      </Badge>
+                        <StatusIcon className="h-3 w-3" />
+                        {status.label}
+                      </span>
                     </div>
 
-                    <div className="grid gap-4 text-sm text-slate-600 md:grid-cols-3">
-                      <div className="space-y-2">
+                    <div className="mt-3 grid gap-3 text-sm text-gray-600 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           <span>{booking.customerPhone}</span>
                         </div>
                         {booking.customerEmail && (
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
+                          <div className="flex items-center gap-2 break-all">
+                            <Mail className="h-4 w-4" />
                             <span>{booking.customerEmail}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {booking.pg && (
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
@@ -238,46 +248,59 @@ export default function AdminBookingsPage() {
                             </span>
                           </div>
                         )}
+                      </div>
+
+                      <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            Check-in:{' '}
+                            Check-in{' '}
                             {new Date(booking.checkInDate).toLocaleDateString()}
                           </span>
                         </div>
+                        {booking.checkOutDate && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              Check-out{' '}
+                              {new Date(
+                                booking.checkOutDate,
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 font-medium text-gray-900">
                           <IndianRupee className="h-4 w-4" />
                           <span>
-                            Total: ₹{booking.totalAmount.toLocaleString()}
+                            Total ₹{booking.totalAmount.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div
+                          className={`flex items-center gap-2 ${
+                            booking.paidAmount >= booking.totalAmount
+                              ? 'text-green-600'
+                              : 'text-orange-600'
+                          }`}
+                        >
                           <IndianRupee className="h-4 w-4" />
-                          <span
-                            className={
-                              booking.paidAmount >= booking.totalAmount
-                                ? 'text-green-600'
-                                : 'text-orange-600'
-                            }
-                          >
-                            Paid: ₹{booking.paidAmount.toLocaleString()}
+                          <span>
+                            Paid ₹{booking.paidAmount.toLocaleString()}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {booking.notes && (
-                      <p className="mt-3 text-sm italic text-slate-500">
-                        Note: {booking.notes}
+                      <p className="mt-3 text-sm text-gray-500 line-clamp-2">
+                        {booking.notes}
                       </p>
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2 ml-4">
+                  <div className="flex flex-row gap-2 lg:ml-4 lg:flex-col lg:items-stretch">
                     {booking.status === 'PENDING' && (
                       <>
                         <Button
@@ -315,7 +338,7 @@ export default function AdminBookingsPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 text-xs text-slate-400">
+                <div className="mt-3 text-xs text-gray-400">
                   Booked: {new Date(booking.createdAt).toLocaleString()}
                 </div>
               </div>
@@ -334,7 +357,7 @@ export default function AdminBookingsPage() {
               >
                 Previous
               </Button>
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-gray-600">
                 Page {page} of {totalPages}
               </span>
               <Button

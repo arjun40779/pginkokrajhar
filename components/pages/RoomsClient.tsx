@@ -25,6 +25,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SanityRoomWithPG } from '@/lib/sanity/queries/roomSection';
+import {
+  formatRoomAvailabilityLabel,
+  isRoomAvailableForBooking,
+} from '@/lib/rooms/availability';
 
 interface RoomsClientProps {
   initialRooms: SanityRoomWithPG[];
@@ -226,22 +230,40 @@ export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
                     </div>
 
                     <div className="absolute right-3 top-3">
-                      <Badge
-                        variant="secondary"
-                        className={
-                          STATUS_STYLE[room.availabilityStatus] ??
-                          'bg-white/90 text-gray-700'
-                        }
-                      >
-                        {room.availabilityStatus === 'AVAILABLE' ? (
-                          <span className="flex items-center">
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                            Available
-                          </span>
-                        ) : (
-                          room.availabilityStatus
-                        )}
-                      </Badge>
+                      {(() => {
+                        const isAvailable = isRoomAvailableForBooking(
+                          room.availabilityStatus,
+                          room.currentOccupancy,
+                          room.maxOccupancy,
+                        );
+                        const statusLabel = formatRoomAvailabilityLabel(
+                          room.availabilityStatus,
+                          room.currentOccupancy,
+                          room.maxOccupancy,
+                        );
+
+                        return (
+                          <Badge
+                            variant="secondary"
+                            className={
+                              STATUS_STYLE[
+                                isAvailable
+                                  ? 'AVAILABLE'
+                                  : statusLabel.toUpperCase()
+                              ] ?? 'bg-white/90 text-gray-700'
+                            }
+                          >
+                            {isAvailable ? (
+                              <span className="flex items-center">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Available
+                              </span>
+                            ) : (
+                              statusLabel
+                            )}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
 

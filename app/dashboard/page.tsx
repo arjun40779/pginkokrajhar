@@ -79,10 +79,10 @@ export default function Dashboard() {
               </Button>
               <Button
                 className="w-full"
-                onClick={() => router.push('/resident-portal')}
+                onClick={() => router.push('/resident')}
                 variant="outline"
               >
-                Resident Portal
+                Resident Dashboard
               </Button>
               <Button
                 className="w-full"
@@ -98,3 +98,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

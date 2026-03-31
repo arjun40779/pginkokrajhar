@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
+import {
+  formatRoomAvailabilityLabel,
+  isRoomAvailableForBooking,
+  normalizeRoomAvailabilityStatus,
+} from '@/lib/rooms/availability';
 
 // GET /api/booking/validate?pgId=...&roomId=...
 // Real-time validation of price and availability before booking
@@ -37,7 +42,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const available = room.availabilityStatus === 'AVAILABLE';
+    const available = isRoomAvailableForBooking(
+      room.availabilityStatus,
+      room.currentOccupancy,
+      room.maxOccupancy,
+    );
+    const normalizedStatus = normalizeRoomAvailabilityStatus(
+      room.availabilityStatus,
+      room.currentOccupancy,
+      room.maxOccupancy,
+    );
 
     return NextResponse.json({
       valid: available,
@@ -47,14 +61,14 @@ export async function GET(request: NextRequest) {
       monthlyRent: Number(room.monthlyRent),
       securityDeposit: Number(room.securityDeposit),
       maintenanceCharges: Number(room.maintenanceCharges),
-      availabilityStatus: room.availabilityStatus,
-      reason: available ? undefined : `Room is currently ${room.availabilityStatus.toLowerCase()}`,
+      availabilityStatus: normalizedStatus,
+      reason: available
+        ? undefined
+        : `Room is currently ${formatRoomAvailabilityLabel(normalizedStatus).toLowerCase()}`,
     });
   } catch (error) {
     console.error('Error validating booking:', error);
-    return NextResponse.json(
-      { error: 'Validation failed' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Validation failed' }, { status: 500 });
   }
 }
+

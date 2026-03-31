@@ -4,6 +4,8 @@ import FAQSection from '@/components/sections/FAQSection';
 import { getPageSection } from '@/lib/sanity/queries/getPageSection';
 import type { PageSectionResponse } from '@/sanity/types';
 
+export const revalidate = 60;
+
 export default async function ContactPage() {
   // Fetch page section data for contact page
   const pageData: PageSectionResponse | null = await getPageSection('/contact');

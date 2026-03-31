@@ -9,29 +9,39 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: Array<'ADMIN' | 'TENANT' | 'OWNER'>;
   redirectTo?: string;
+  unauthorizedRedirectTo?: string;
 }
 
 export default function ProtectedRoute({
   children,
   allowedRoles = ['ADMIN', 'TENANT', 'OWNER'],
   redirectTo = '/auth/login',
-}: ProtectedRouteProps) {
+  unauthorizedRedirectTo = '/unauthorized',
+}: Readonly<ProtectedRouteProps>) {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push(redirectTo);
+        router.replace(redirectTo);
         return;
       }
 
       if (userProfile && !allowedRoles.includes(userProfile.role)) {
-        router.push('/unauthorized');
+        router.replace(unauthorizedRedirectTo);
         return;
       }
     }
-  }, [user, userProfile, loading, router, allowedRoles, redirectTo]);
+  }, [
+    user,
+    userProfile,
+    loading,
+    router,
+    allowedRoles,
+    redirectTo,
+    unauthorizedRedirectTo,
+  ]);
 
   if (loading) {
     return (
@@ -48,3 +58,4 @@ export default function ProtectedRoute({
 
   return <>{children}</>;
 }
+
