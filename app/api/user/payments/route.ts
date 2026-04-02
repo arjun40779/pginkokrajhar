@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/prisma';
+import { getResidentRentPaymentState } from '@/lib/resident/rentPaymentState';
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,33 +40,25 @@ export async function GET(request: NextRequest) {
         tenantId: tenant.id,
       },
       orderBy: {
-        createdAt: 'desc',
+        dueDate: 'asc',
       },
     });
 
-    // Calculate pending payments and next due date
-    const pendingPayments = payments.filter((p) => p.status === 'PENDING');
-    const pendingAmount = pendingPayments.reduce(
-      (sum, payment) => sum + Number(payment.amount),
-      0,
+    const rentState = getResidentRentPaymentState(
+      {
+        moveInDate: tenant.moveInDate,
+        rentAmount: tenant.rentAmount,
+      },
+      payments,
     );
-
-    // Calculate next due date (assume monthly rent)
-    const lastPayment = payments.find((p) => p.status === 'COMPLETED');
-    const nextDueDate = lastPayment
-      ? new Date(lastPayment.paymentDate || lastPayment.createdAt).setMonth(
-          new Date(
-            lastPayment.paymentDate || lastPayment.createdAt,
-          ).getMonth() + 1,
-        )
-      : new Date();
 
     return NextResponse.json({
       payments,
-      pendingAmount,
-      nextDueDate,
+      pendingAmount: rentState.pendingAmount,
+      nextDueDate: rentState.nextDueDate,
       monthlyRent: tenant.rentAmount,
-      rentStatus: tenant.rentStatus,
+      rentStatus: rentState.rentStatus,
+      rentCycle: rentState.currentCycle,
     });
   } catch (error) {
     console.error('Error fetching user payments:', error);

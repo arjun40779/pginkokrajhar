@@ -36,36 +36,15 @@ export default async function ContactPage() {
 
           if (!sectionData) return null;
 
-          // Apply custom styling
-          const customClasses = customSettings?.backgroundColor || '';
-          const paddingClasses = customSettings?.paddingOverride || 'py-12';
-          const marginClasses =
-            customSettings?.marginOverride || (index > 0 ? 'mt-12' : '');
-
-          const containerClasses =
-            `${customClasses} ${paddingClasses} ${marginClasses}`.trim();
-
           switch (sectionData._type) {
             case 'contactSection':
-              return (
-                <div key={sectionData._id} className={containerClasses}>
-                  <ContactFormSection data={sectionData} />
-                </div>
-              );
+              return <ContactFormSection data={sectionData} />;
 
             case 'contactLocationSection':
-              return (
-                <div key={sectionData._id} className={containerClasses}>
-                  <ContactLocationSection data={sectionData} />
-                </div>
-              );
+              return <ContactLocationSection data={sectionData} />;
 
             case 'faqSection':
-              return (
-                <div key={sectionData._id} className={containerClasses}>
-                  <FAQSection data={sectionData} />
-                </div>
-              );
+              return <FAQSection data={sectionData} />;
 
             default:
               console.warn(`Unknown section type: ${sectionData._type}`);

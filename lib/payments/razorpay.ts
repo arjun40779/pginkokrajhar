@@ -1,26 +1,32 @@
 import Razorpay from 'razorpay';
 
-function readEnv(name: 'RAZORPAY_KEY_ID' | 'RAZORPAY_KEY_SECRET') {
-  const value = process.env[name];
+function readEnv(
+  primaryName: 'RAZORPAY_KEY_ID' | 'RAZORPAY_KEY_SECRET',
+  legacyName: 'RZORPAY_KEY_ID' | 'RZORPAY_KEY_SECRET',
+) {
+  const value = process.env[primaryName] ?? process.env[legacyName];
 
   if (!value) {
-    throw new Error(`${name} is not configured`);
+    throw new Error(
+      `${primaryName} is not configured (legacy ${legacyName} is also missing)`,
+    );
   }
 
   return value;
 }
 
 export function getRazorpayKeyId() {
-  return readEnv('RAZORPAY_KEY_ID');
+  return readEnv('RAZORPAY_KEY_ID', 'RZORPAY_KEY_ID');
 }
 
 export function getRazorpayKeySecret() {
-  return readEnv('RAZORPAY_KEY_SECRET');
+  return readEnv('RAZORPAY_KEY_SECRET', 'RZORPAY_KEY_SECRET');
 }
 
 export function isRazorpayConfigured() {
   return Boolean(
-    process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET,
+    (process.env.RAZORPAY_KEY_ID ?? process.env.RZORPAY_KEY_ID) &&
+    (process.env.RAZORPAY_KEY_SECRET ?? process.env.RZORPAY_KEY_SECRET),
   );
 }
 
@@ -30,3 +36,4 @@ export function getRazorpayClient() {
     key_secret: getRazorpayKeySecret(),
   });
 }
+

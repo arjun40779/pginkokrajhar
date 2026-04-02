@@ -151,7 +151,11 @@ export function Contact() {
                       rows={6}
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full bg-black text-white hover:bg-black/90"
+                  >
                     <Send className="mr-2 h-4 w-4" />
                     Send Message
                   </Button>

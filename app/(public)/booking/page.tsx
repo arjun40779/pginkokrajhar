@@ -1,4 +1,7 @@
+import { redirect } from 'next/navigation';
 import BookingPageClient from './BookingPageClient';
+import { isRoomAvailableForBooking } from '@/lib/rooms/availability';
+import { prisma } from '@/prisma';
 
 type BookingPageProps = {
   searchParams?: {
@@ -15,14 +18,41 @@ function getSingleSearchParam(value?: string | string[]) {
   return value ?? null;
 }
 
-export default function BookingPage({
+export default async function BookingPage({
   searchParams,
 }: Readonly<BookingPageProps>) {
-  return (
-    <BookingPageClient
-      initialPgId={getSingleSearchParam(searchParams?.pgId)}
-      initialRoomId={getSingleSearchParam(searchParams?.roomId)}
-    />
-  );
+  const pgId = getSingleSearchParam(searchParams?.pgId);
+  const roomId = getSingleSearchParam(searchParams?.roomId);
+
+  if (roomId) {
+    const room = await prisma.room.findFirst({
+      where: {
+        id: roomId,
+        isActive: true,
+        ...(pgId ? { pgId } : {}),
+      },
+      select: {
+        pgId: true,
+        availabilityStatus: true,
+        currentOccupancy: true,
+        maxOccupancy: true,
+      },
+    });
+
+    if (
+      !room ||
+      !isRoomAvailableForBooking(
+        room.availabilityStatus,
+        room.currentOccupancy,
+        room.maxOccupancy,
+      )
+    ) {
+      redirect('/rooms');
+    }
+
+    return <BookingPageClient initialPgId={room.pgId} initialRoomId={roomId} />;
+  }
+
+  return <BookingPageClient initialPgId={pgId} initialRoomId={roomId} />;
 }
 

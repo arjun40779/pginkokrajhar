@@ -19,6 +19,7 @@ import Icon from '../Icon';
 export const iconMap = {};
 
 const ContactFromSection = ({ data }: { data: ContactSection }) => {
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,11 +28,54 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
     message: '',
   });
   const { sectionTitle, sectionSubtitle, contactCards } = data;
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would send to backend
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        const detailMessage = Array.isArray(payload?.details)
+          ? payload.details[0]?.message
+          : null;
+
+        throw new Error(
+          detailMessage || payload?.error || 'Failed to send message',
+        );
+      }
+
+      if (payload?.warning) {
+        toast.success(
+          'Message saved successfully. Our team will follow up shortly.',
+        );
+      } else {
+        toast.success("Message sent successfully! We'll get back to you soon.");
+      }
+
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: '',
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to send message',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const iconMap = {};
@@ -53,7 +97,7 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
+              <CardTitle className="font-semibold">Send us a Message</CardTitle>
               <CardDescription>
                 Fill out the form below and we'll get back to you within 24
                 hours
@@ -63,7 +107,9 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Full Name *</Label>
+                    <Label htmlFor="name" className="mb-1">
+                      Full Name *
+                    </Label>
                     <Input
                       id="name"
                       required
@@ -75,7 +121,9 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="email" className="mb-1">
+                      Email *
+                    </Label>
                     <Input
                       id="email"
                       type="email"
@@ -90,7 +138,9 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone" className="mb-1">
+                      Phone Number *
+                    </Label>
                     <Input
                       id="phone"
                       type="tel"
@@ -103,7 +153,9 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="subject">Subject *</Label>
+                    <Label htmlFor="subject" className="mb-1">
+                      Subject *
+                    </Label>
                     <Input
                       id="subject"
                       required
@@ -116,7 +168,9 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message" className="mb-1">
+                    Message *
+                  </Label>
                   <Textarea
                     id="message"
                     required
@@ -128,9 +182,14 @@ const ContactFromSection = ({ data }: { data: ContactSection }) => {
                     rows={6}
                   />
                 </div>
-                <Button type="submit" size="lg" className="w-full">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={submitting}
+                  className="w-full bg-black text-white hover:bg-black/90"
+                >
                   <Send className="mr-2 h-4 w-4" />
-                  Send Message
+                  {submitting ? 'Sending Message...' : 'Send Message'}
                 </Button>
               </form>
             </CardContent>

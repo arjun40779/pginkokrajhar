@@ -1,4 +1,4 @@
-import { client } from '@/sanity/lib/client';
+import { fetchSanityQuery } from '@/sanity/lib/fetch';
 
 // GROQ query for PG listings (customer-facing)
 export const pgListQuery = `
@@ -360,7 +360,9 @@ export interface SanityPG {
 // Fetch functions
 export async function getAllPGs(): Promise<SanityPG[]> {
   try {
-    const pgs = await client.fetch<SanityPG[]>(pgListQuery);
+    const pgs = await fetchSanityQuery<SanityPG[]>({
+      query: pgListQuery,
+    });
     return pgs || [];
   } catch (error) {
     console.error('Error fetching PGs from Sanity:', error);
@@ -370,7 +372,10 @@ export async function getAllPGs(): Promise<SanityPG[]> {
 
 export async function getPGByDbId(dbId: string): Promise<SanityPG | null> {
   try {
-    return await client.fetch<SanityPG>(pgDetailQuery, { dbId });
+    return await fetchSanityQuery<SanityPG | null>({
+      query: pgDetailQuery,
+      params: { dbId },
+    });
   } catch (error) {
     console.error(`Error fetching PG ${dbId} from Sanity:`, error);
     return null;
@@ -379,7 +384,10 @@ export async function getPGByDbId(dbId: string): Promise<SanityPG | null> {
 
 export async function getPGBySlug(slug: string): Promise<SanityPG | null> {
   try {
-    return await client.fetch<SanityPG>(pgDetailBySlugQuery, { slug });
+    return await fetchSanityQuery<SanityPG | null>({
+      query: pgDetailBySlugQuery,
+      params: { slug },
+    });
   } catch (error) {
     console.error(`Error fetching PG by slug ${slug} from Sanity:`, error);
     return null;
@@ -388,7 +396,9 @@ export async function getPGBySlug(slug: string): Promise<SanityPG | null> {
 
 export async function getFeaturedPGs(): Promise<SanityPG[]> {
   try {
-    const pgs = await client.fetch<SanityPG[]>(featuredPGsQuery);
+    const pgs = await fetchSanityQuery<SanityPG[]>({
+      query: featuredPGsQuery,
+    });
     return pgs || [];
   } catch (error) {
     console.error('Error fetching featured PGs from Sanity:', error);

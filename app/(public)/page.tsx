@@ -28,7 +28,7 @@ export default async function HomePage() {
 
 // Generate page-specific metadata
 export async function generateMetadata(): Promise<Metadata> {
-  const pageData = await getHomePageSection();
+  const pageData = await getHomePageSection({ stega: false });
 
   if (!pageData) {
     return {

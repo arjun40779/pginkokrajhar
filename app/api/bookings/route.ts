@@ -27,65 +27,76 @@ const bookingCreateSchema = z.object({
   notes: z.string().optional(),
 });
 
+async function resolveBookingRoomDetails(roomId: string | undefined) {
+  if (!roomId) {
+    return { roomDetails: null, pgId: undefined };
+  }
+
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    select: {
+      id: true,
+      roomNumber: true,
+      roomType: true,
+      monthlyRent: true,
+      securityDeposit: true,
+      availabilityStatus: true,
+      currentOccupancy: true,
+      maxOccupancy: true,
+      pgId: true,
+      pg: {
+        select: {
+          id: true,
+          name: true,
+          securityDeposit: true,
+        },
+      },
+    },
+  });
+
+  if (!room) {
+    return {
+      error: NextResponse.json({ error: 'Room not found' }, { status: 404 }),
+    };
+  }
+
+  if (
+    !isRoomAvailableForBooking(
+      room.availabilityStatus,
+      room.currentOccupancy,
+      room.maxOccupancy,
+    )
+  ) {
+    return {
+      error: NextResponse.json(
+        {
+          error: `Room is currently ${formatRoomAvailabilityLabel(
+            room.availabilityStatus,
+            room.currentOccupancy,
+            room.maxOccupancy,
+          ).toLowerCase()}`,
+        },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return { roomDetails: room, pgId: room.pgId };
+}
+
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = bookingCreateSchema.parse(body);
 
-    let pgId = validatedData.pgId;
-    let roomDetails = null;
-
-    // If roomId is provided, get room details and PG ID
-    if (validatedData.roomId) {
-      const room = await prisma.room.findUnique({
-        where: { id: validatedData.roomId },
-        select: {
-          id: true,
-          roomNumber: true,
-          roomType: true,
-          monthlyRent: true,
-          securityDeposit: true,
-          availabilityStatus: true,
-          currentOccupancy: true,
-          maxOccupancy: true,
-          pgId: true,
-          pg: {
-            select: {
-              id: true,
-              name: true,
-              securityDeposit: true,
-            },
-          },
-        },
-      });
-
-      if (!room) {
-        return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      }
-
-      if (
-        !isRoomAvailableForBooking(
-          room.availabilityStatus,
-          room.currentOccupancy,
-          room.maxOccupancy,
-        )
-      ) {
-        return NextResponse.json(
-          {
-            error: `Room is currently ${formatRoomAvailabilityLabel(
-              room.availabilityStatus,
-              room.currentOccupancy,
-              room.maxOccupancy,
-            ).toLowerCase()}`,
-          },
-          { status: 400 },
-        );
-      }
-
-      roomDetails = room;
-      pgId = room.pgId;
+    const bookingRoom = await resolveBookingRoomDetails(validatedData.roomId);
+    if ('error' in bookingRoom) {
+      return bookingRoom.error;
     }
+
+    const roomDetails = bookingRoom.roomDetails;
+    const pgId = bookingRoom.pgId ?? validatedData.pgId;
 
     // Validate PG exists
     if (!pgId) {
@@ -121,6 +132,7 @@ export async function POST(request: NextRequest) {
       ? roomDetails.securityDeposit
       : pg.securityDeposit;
     const totalAmount = Number(monthlyRent) + Number(securityDeposit);
+    const bookingNotes = validatedData.notes?.trim() || null;
 
     // Create booking
     const booking = await prisma.booking.create({
@@ -139,11 +151,10 @@ export async function POST(request: NextRequest) {
         totalAmount: totalAmount,
         paidAmount: 0,
         status: 'PENDING',
-        notes: validatedData.notes || null,
+        notes: bookingNotes,
       },
     });
 
-    // If booking a specific room, mark it as reserved
     if (validatedData.roomId) {
       await prisma.room.update({
         where: { id: validatedData.roomId },

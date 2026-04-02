@@ -135,20 +135,29 @@ export default function BookingConfirmationPageClient({
   }
 
   const checkInDate = new Date(booking.checkInDate);
+  const isConfirmedBooking = booking.status === 'CONFIRMED';
+  const heading = isConfirmedBooking
+    ? 'Booking Confirmed!'
+    : 'Booking Received';
+  const subheading = isConfirmedBooking
+    ? 'Your payment was successful and your booking is confirmed.'
+    : 'Your booking request has been submitted successfully';
+  const heroTone = isConfirmedBooking ? 'bg-green-100' : 'bg-yellow-100';
+  const heroIconTone = isConfirmedBooking
+    ? 'text-green-600'
+    : 'text-yellow-600';
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-            <CheckCircle className="h-10 w-10 text-green-600" />
+          <div
+            className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full ${heroTone}`}
+          >
+            <CheckCircle className={`h-10 w-10 ${heroIconTone}`} />
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">
-            Booking Confirmed!
-          </h1>
-          <p className="text-gray-600">
-            Your booking request has been submitted successfully
-          </p>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">{heading}</h1>
+          <p className="text-gray-600">{subheading}</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -442,3 +451,4 @@ export default function BookingConfirmationPageClient({
     </div>
   );
 }
+

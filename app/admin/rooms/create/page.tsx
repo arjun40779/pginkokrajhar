@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
+import { getMinimumOccupancyForRoomType } from '@/lib/rooms/occupancy';
 
 interface PG {
   id: string;
@@ -84,10 +85,20 @@ export default function CreateRoomPage() {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(newValue) : newValue,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: type === 'number' ? Number(newValue) : newValue,
+      };
+
+      if (name === 'roomType') {
+        updated.maxOccupancy = getMinimumOccupancyForRoomType(
+          newValue as RoomFormData['roomType'],
+        );
+      }
+
+      return updated;
+    });
   };
 
   const validateForm = () => {

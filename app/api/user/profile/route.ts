@@ -5,6 +5,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/prisma';
 
+async function getOrCreateUserProfile(authUser: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, any> | null;
+}) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: authUser.id,
+    },
+  });
+
+  if (user) {
+    return user;
+  }
+
+  const metadata = authUser.user_metadata ?? {};
+  const name =
+    (metadata.full_name as string | undefined) ||
+    (metadata.name as string | undefined) ||
+    authUser.email ||
+    null;
+  const mobile =
+    (metadata.mobile as string | undefined) ||
+    (metadata.phone as string | undefined) ||
+    '';
+
+  return prisma.user.create({
+    data: {
+      id: authUser.id,
+      name,
+      mobile,
+      email: authUser.email,
+      role: 'TENANT',
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('Profile API: Starting request...');
@@ -33,50 +70,12 @@ export async function GET(request: NextRequest) {
       authUser.id,
     );
 
-    // Get user from database
-    const user = await prisma.user.findFirst({
-      where: {
-        id: authUser.id,
-      },
-    });
+    const user = await getOrCreateUserProfile(authUser);
 
     console.log('Profile API: Database query result:', {
       hasUser: !!user,
       userId: user?.id,
     });
-
-    if (!user) {
-      console.log(
-        'Profile API: User not found in database, attempting auto-create from auth metadata',
-      );
-
-      const metadata = (authUser.user_metadata || {}) as Record<string, any>;
-      const mobile = metadata.mobile as string | undefined;
-      const name = (metadata.name as string | undefined) ?? authUser.email;
-
-      if (!mobile) {
-        console.log(
-          'Profile API: Cannot auto-create user profile because mobile is missing in auth metadata',
-        );
-        return NextResponse.json(
-          { error: 'User profile not found and mobile missing in metadata' },
-          { status: 404 },
-        );
-      }
-
-      const createdUser = await prisma.user.create({
-        data: {
-          id: authUser.id,
-          name,
-          mobile,
-          email: authUser.email,
-          role: 'TENANT',
-        },
-      });
-
-      console.log('Profile API: Auto-created user profile successfully');
-      return NextResponse.json(createdUser);
-    }
 
     console.log('Profile API: Returning user data successfully');
     return NextResponse.json(user);

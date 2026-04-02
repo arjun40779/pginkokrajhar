@@ -1,3 +1,4 @@
+import { stegaClean } from '@sanity/client/stega';
 import { MapPin } from 'lucide-react';
 import {
   Card,
@@ -8,6 +9,10 @@ import {
 } from '../ui/Card';
 import { ContactLocationSection as ContactLocationType } from '@/sanity/types';
 
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
+}
+
 const ContactLocationSection = ({ data }: { data: ContactLocationType }) => {
   const {
     sectionTitle,
@@ -16,11 +21,11 @@ const ContactLocationSection = ({ data }: { data: ContactLocationType }) => {
     address: { addressLine1, addressLine2, addressLine3 },
   } = data;
   return (
-    <div className="mt-12">
+    <div className="">
       <Card>
         <CardHeader>
-          <CardTitle>{sectionTitle}</CardTitle>
-          <CardDescription>{sectionSubtitle}</CardDescription>
+          <CardTitle>{cleanCmsString(sectionTitle)}</CardTitle>
+          <CardDescription>{cleanCmsString(sectionSubtitle)}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="aspect-video w-full bg-gray-200 rounded-lg overflow-hidden">
@@ -39,9 +44,13 @@ const ContactLocationSection = ({ data }: { data: ContactLocationType }) => {
           <div className="mt-4 flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
             <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-gray-900">{addressLine1}</p>
-              <p className="text-gray-700">{addressLine2}</p>
-              <p className="text-sm text-gray-600 mt-1">{addressLine3}</p>
+              <p className="font-semibold text-gray-900">
+                {cleanCmsString(addressLine1)}
+              </p>
+              <p className="text-gray-700">{cleanCmsString(addressLine2)}</p>
+              <p className="text-sm text-gray-600 mt-1">
+                {cleanCmsString(addressLine3)}
+              </p>
             </div>
           </div>
         </CardContent>

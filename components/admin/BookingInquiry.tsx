@@ -21,12 +21,13 @@ interface Inquiry {
   message?: string;
   createdAt: string;
   status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'CLOSED';
+  source?: string | null;
   pg: {
     id: string;
     name: string;
     area: string;
     city: string;
-  };
+  } | null;
 }
 
 const statusLabels: Record<Inquiry['status'], string> = {
@@ -64,6 +65,30 @@ function getStatusIcon(status: Inquiry['status']) {
     default:
       return null;
   }
+}
+
+function getInquiryTargetLabel(inquiry: Inquiry) {
+  if (inquiry.pg) {
+    return `${inquiry.pg.name} - ${inquiry.pg.area}, ${inquiry.pg.city}`;
+  }
+
+  if (inquiry.source === 'contact-form') {
+    return 'General contact form';
+  }
+
+  return 'General inquiry';
+}
+
+function getInquirySourceLabel(inquiry: Inquiry) {
+  if (inquiry.pg) {
+    return `${inquiry.pg.area}, ${inquiry.pg.city}`;
+  }
+
+  if (inquiry.source) {
+    return `Source: ${inquiry.source.replaceAll('-', ' ')}`;
+  }
+
+  return null;
 }
 
 export default function BookingInquiry() {
@@ -225,7 +250,7 @@ export default function BookingInquiry() {
                       {inquiry.name}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      {inquiry.pg.name} - {inquiry.pg.area}, {inquiry.pg.city}
+                      {getInquiryTargetLabel(inquiry)}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -309,11 +334,13 @@ export default function BookingInquiry() {
                     Property
                   </p>
                   <p className="text-gray-900 mt-1">
-                    {selectedInquiry.pg.name}
+                    {selectedInquiry.pg?.name || 'General contact form'}
                   </p>
-                  <p className="text-gray-600 text-sm">
-                    {selectedInquiry.pg.area}, {selectedInquiry.pg.city}
-                  </p>
+                  {getInquirySourceLabel(selectedInquiry) ? (
+                    <p className="text-gray-600 text-sm capitalize">
+                      {getInquirySourceLabel(selectedInquiry)}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>

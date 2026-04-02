@@ -1,5 +1,6 @@
 import '../globals.css';
-import Script from 'next/script';
+import { draftMode } from 'next/headers';
+import { VisualEditing } from 'next-sanity';
 import { getLayoutSection } from '@/lib/sanity/queries/getLayoutSection';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -11,12 +12,11 @@ export default async function RootLayout({
 }>) {
   // Fetch layout data from Sanity (includes header and footer references) - SERVER SIDE
   const layoutData = await getLayoutSection();
+  const isDraftMode = draftMode().isEnabled;
 
   return (
     <html lang="en" className="h-full antialiased">
-      <head>
-        {/* <Script src="https://www.google.com/recaptcha/enterprise.js?render=6LcyBpAsAAAAAO6OUHgkuJMpmxKerDgmu2Ff0TuH" /> */}
-      </head>
+      <head />
       <body className="min-h-full flex flex-col">
         {layoutData?.header ? (
           <Header headerData={layoutData.header as any} />
@@ -29,6 +29,7 @@ export default async function RootLayout({
 
         {/* Mobile Bottom Padding - to prevent content from being hidden behind bottom nav */}
         <div className="md:hidden h-16" />
+        {isDraftMode ? <VisualEditing /> : null}
       </body>
     </html>
   );
