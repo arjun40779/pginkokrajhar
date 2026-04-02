@@ -44,12 +44,38 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const bookingFilters = [] as Array<{
+      customerEmail?: string;
+      roomId?: string;
+    }>;
+
+    if (user.email) {
+      bookingFilters.push({ customerEmail: user.email });
+    }
+
+    if (tenant.roomId) {
+      bookingFilters.push({ roomId: tenant.roomId });
+    }
+
+    const bookings =
+      bookingFilters.length > 0
+        ? await prisma.booking.findMany({
+            where: {
+              OR: bookingFilters,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          })
+        : [];
+
     const rentState = getResidentRentPaymentState(
       {
         moveInDate: tenant.moveInDate,
         rentAmount: tenant.rentAmount,
       },
       payments,
+      bookings,
     );
 
     return NextResponse.json({
@@ -58,6 +84,7 @@ export async function GET(request: NextRequest) {
       nextDueDate: rentState.nextDueDate,
       monthlyRent: tenant.rentAmount,
       rentStatus: rentState.rentStatus,
+      currentRentPeriod: rentState.currentPeriod,
       rentCycle: rentState.currentCycle,
     });
   } catch (error) {

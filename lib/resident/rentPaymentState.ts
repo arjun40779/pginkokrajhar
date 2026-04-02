@@ -6,9 +6,24 @@ type PaymentLike = {
   month: string;
 };
 
+type BookingLike = {
+  checkInDate: Date | string;
+  paidAmount: number | string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+};
+
 type TenantLike = {
   moveInDate: Date | string;
   rentAmount: number;
+};
+
+type ResidentRentCycleStatus = 'PENDING' | 'OVERDUE' | 'UPCOMING';
+type ResidentRentPeriodStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'UPCOMING';
+
+type CompletedCycle = {
+  month: string;
+  dueDate: Date;
+  amount: number;
 };
 
 export type ResidentRentCycle = {
@@ -17,12 +32,20 @@ export type ResidentRentCycle = {
   dueDate: Date;
   month: string;
   canPayNow: boolean;
+  status: ResidentRentCycleStatus;
+};
+
+export type ResidentRentPeriod = {
+  month: string;
+  status: ResidentRentPeriodStatus;
+  label: string;
 };
 
 export type ResidentRentState = {
   nextDueDate: Date | null;
   pendingAmount: number;
   rentStatus: 'PAID' | 'PENDING' | 'OVERDUE';
+  currentPeriod: ResidentRentPeriod | null;
   currentCycle: ResidentRentCycle | null;
 };
 
@@ -44,6 +67,44 @@ function compareByDueDate(left: PaymentLike, right: PaymentLike) {
 
 function isOpenPayment(status: PaymentLike['status']) {
   return status === 'PENDING' || status === 'FAILED';
+}
+
+function isBookingPaid(booking: BookingLike) {
+  return (
+    (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') &&
+    Number(booking.paidAmount) > 0
+  );
+}
+
+function getCycleStatus(
+  dueDate: Date | string,
+  referenceDate: Date = new Date(),
+): ResidentRentCycleStatus {
+  const dueTime = startOfDay(dueDate).getTime();
+  const referenceTime = startOfDay(referenceDate).getTime();
+
+  if (dueTime < referenceTime) {
+    return 'OVERDUE';
+  }
+
+  if (dueTime === referenceTime) {
+    return 'PENDING';
+  }
+
+  return 'UPCOMING';
+}
+
+function getPeriodLabel(status: ResidentRentPeriodStatus) {
+  switch (status) {
+    case 'PAID':
+      return 'Paid';
+    case 'PENDING':
+      return 'Pending';
+    case 'OVERDUE':
+      return 'Overdue';
+    default:
+      return 'Upcoming';
+  }
 }
 
 export function addOneMonth(value: Date | string) {
@@ -69,6 +130,7 @@ export function isDueDateReached(
 export function getResidentRentPaymentState(
   tenant: TenantLike | null,
   payments: PaymentLike[],
+  bookings: BookingLike[] = [],
   referenceDate: Date = new Date(),
 ): ResidentRentState {
   if (!tenant) {
@@ -76,67 +138,111 @@ export function getResidentRentPaymentState(
       nextDueDate: null,
       pendingAmount: 0,
       rentStatus: 'PENDING',
+      currentPeriod: null,
       currentCycle: null,
     };
   }
 
-  const openPayments = payments.filter((payment) =>
-    isOpenPayment(payment.status),
+  const completedCyclesByMonth = new Map<string, CompletedCycle>();
+
+  payments.forEach((payment) => {
+    if (payment.status !== 'COMPLETED') {
+      return;
+    }
+
+    completedCyclesByMonth.set(payment.month, {
+      month: payment.month,
+      dueDate: toDate(payment.dueDate),
+      amount: Number(payment.amount),
+    });
+  });
+
+  bookings.forEach((booking) => {
+    if (!isBookingPaid(booking)) {
+      return;
+    }
+
+    const month = formatPaymentMonth(booking.checkInDate);
+    completedCyclesByMonth.set(month, {
+      month,
+      dueDate: toDate(booking.checkInDate),
+      amount: Number(booking.paidAmount),
+    });
+  });
+
+  const completedCycles = [...completedCyclesByMonth.values()].sort(
+    compareByDueDate,
   );
-  const scheduledPayments = [...openPayments].sort(compareByDueDate);
-  const dueNowPayments = scheduledPayments.filter((payment) =>
-    isDueDateReached(payment.dueDate, referenceDate),
+  const openPayments = payments
+    .filter(
+      (payment) =>
+        isOpenPayment(payment.status) &&
+        !completedCyclesByMonth.has(payment.month),
+    )
+    .sort(compareByDueDate);
+  const nextOpenPayment = openPayments[0];
+  const dueNowPayments = openPayments.filter(
+    (payment) => getCycleStatus(payment.dueDate, referenceDate) !== 'UPCOMING',
   );
-  const pendingAmount = dueNowPayments.reduce(
+  let pendingAmount = dueNowPayments.reduce(
     (sum, payment) => sum + Number(payment.amount),
     0,
   );
 
-  if (scheduledPayments.length > 0) {
-    const nextScheduledPayment = scheduledPayments[0];
-    const nextDueDate = toDate(nextScheduledPayment.dueDate);
-    const isPayableNow = isDueDateReached(nextDueDate, referenceDate);
-    const isOverdue =
-      startOfDay(nextDueDate).getTime() < startOfDay(referenceDate).getTime();
-    let rentStatus: ResidentRentState['rentStatus'] = 'PAID';
+  const latestCompletedCycle = completedCycles.at(-1);
+  let nextDueDate = toDate(tenant.moveInDate);
 
-    if (isOverdue) {
-      rentStatus = 'OVERDUE';
-    } else if (isPayableNow) {
-      rentStatus = 'PENDING';
-    }
-
-    return {
-      nextDueDate,
-      pendingAmount,
-      rentStatus,
-      currentCycle: {
-        paymentId: nextScheduledPayment.id,
-        amount: Number(nextScheduledPayment.amount),
-        dueDate: nextDueDate,
-        month: nextScheduledPayment.month,
-        canPayNow: isPayableNow,
-      },
-    };
+  if (nextOpenPayment) {
+    nextDueDate = toDate(nextOpenPayment.dueDate);
+  } else if (latestCompletedCycle) {
+    nextDueDate = addOneMonth(latestCompletedCycle.dueDate);
   }
 
-  const latestRecordedPayment = [...payments].sort(compareByDueDate).at(-1);
-  const nextDueDate = latestRecordedPayment
-    ? addOneMonth(latestRecordedPayment.dueDate)
-    : toDate(tenant.moveInDate);
+  const nextCycleStatus = getCycleStatus(nextDueDate, referenceDate);
+  const nextCycleMonth = nextOpenPayment
+    ? nextOpenPayment.month
+    : formatPaymentMonth(nextDueDate);
+  const nextCycleAmount = nextOpenPayment
+    ? Number(nextOpenPayment.amount)
+    : Number(tenant.rentAmount);
+
+  if (!nextOpenPayment && nextCycleStatus !== 'UPCOMING') {
+    pendingAmount += nextCycleAmount;
+  }
+
+  const currentPeriod =
+    latestCompletedCycle && nextCycleStatus === 'UPCOMING'
+      ? {
+          month: latestCompletedCycle.month,
+          status: 'PAID' as const,
+          label: getPeriodLabel('PAID'),
+        }
+      : {
+          month: nextCycleMonth,
+          status: nextCycleStatus,
+          label: getPeriodLabel(nextCycleStatus),
+        };
+
+  let rentStatus: ResidentRentState['rentStatus'] = 'PAID';
+
+  if (nextCycleStatus === 'OVERDUE') {
+    rentStatus = 'OVERDUE';
+  } else if (nextCycleStatus === 'PENDING') {
+    rentStatus = 'PENDING';
+  }
 
   return {
     nextDueDate,
-    pendingAmount: 0,
-    rentStatus: isDueDateReached(nextDueDate, referenceDate)
-      ? 'PENDING'
-      : 'PAID',
+    pendingAmount,
+    rentStatus,
+    currentPeriod,
     currentCycle: {
-      paymentId: null,
-      amount: Number(tenant.rentAmount),
+      paymentId: nextOpenPayment?.id ?? null,
+      amount: nextCycleAmount,
       dueDate: nextDueDate,
-      month: formatPaymentMonth(nextDueDate),
-      canPayNow: isDueDateReached(nextDueDate, referenceDate),
+      month: nextCycleMonth,
+      canPayNow: nextCycleStatus === 'PENDING' || nextCycleStatus === 'OVERDUE',
+      status: nextCycleStatus,
     },
   };
 }

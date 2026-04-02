@@ -121,6 +121,7 @@ export async function getResidentDashboardData(
         }
       : null,
     payments,
+    bookings,
   );
 
   return toSerializable({
@@ -132,6 +133,7 @@ export async function getResidentDashboardData(
     nextDueDate: rentState.nextDueDate,
     monthlyRent: tenant?.rentAmount ?? 0,
     rentStatus: rentState.rentStatus,
+    currentRentPeriod: rentState.currentPeriod,
     rentCycle: rentState.currentCycle,
   });
 }

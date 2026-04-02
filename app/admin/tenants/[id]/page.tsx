@@ -5,13 +5,11 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   Edit,
-  Building2,
   User,
   Phone,
   Mail,
   Calendar,
   IndianRupee,
-  MapPin,
   Users,
   CheckCircle,
   Clock,
@@ -125,8 +123,8 @@ const StatusBadge = ({
     },
   };
 
-  const styleKey = type as keyof typeof styles;
-  const iconKey = type as keyof typeof icons;
+  const styleKey = type;
+  const iconKey = type;
 
   return (
     <span
@@ -140,12 +138,22 @@ const StatusBadge = ({
 
 export default function TenantDetailsPage({
   params,
-}: {
+}: Readonly<{
   params: { id: string };
-}) {
+}>) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [offlinePaymentDate, setOfflinePaymentDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [offlinePaymentNotes, setOfflinePaymentNotes] = useState('');
+  const [isRecordingOfflinePayment, setIsRecordingOfflinePayment] =
+    useState(false);
+  const [offlinePaymentMessage, setOfflinePaymentMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchTenantDetails();
@@ -166,6 +174,50 @@ export default function TenantDetailsPage({
       console.error('Error fetching tenant details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecordOfflinePayment = async () => {
+    try {
+      setIsRecordingOfflinePayment(true);
+      setOfflinePaymentMessage(null);
+
+      const response = await fetch(
+        `/api/admin/tenants/${params.id}/payments/offline`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentDate: offlinePaymentDate,
+            notes: offlinePaymentNotes,
+          }),
+        },
+      );
+
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to record offline payment');
+      }
+
+      setOfflinePaymentNotes('');
+      setOfflinePaymentMessage({
+        type: 'success',
+        text: 'Offline payment recorded successfully.',
+      });
+      await fetchTenantDetails();
+    } catch (error) {
+      setOfflinePaymentMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Failed to record offline payment',
+      });
+    } finally {
+      setIsRecordingOfflinePayment(false);
     }
   };
 
@@ -216,7 +268,7 @@ export default function TenantDetailsPage({
   }
 
   const tenancyMonths = Math.ceil(
-    (new Date().getTime() - new Date(tenant.moveInDate).getTime()) /
+    (Date.now() - new Date(tenant.moveInDate).getTime()) /
       (1000 * 3600 * 24 * 30),
   );
   const paidPayments = tenant.payments.filter(
@@ -524,6 +576,79 @@ export default function TenantDetailsPage({
           {activeTab === 'payments' && (
             <div className="space-y-6">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        Record Offline Rent Payment
+                      </h4>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Use this when the tenant has paid cash, bank transfer,
+                        or any offline method.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+                      <div>
+                        <label
+                          className="block text-xs font-medium text-gray-700 mb-1"
+                          htmlFor="offline-payment-date"
+                        >
+                          Payment Date
+                        </label>
+                        <input
+                          id="offline-payment-date"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          type="date"
+                          value={offlinePaymentDate}
+                          onChange={(event) =>
+                            setOfflinePaymentDate(event.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label
+                          className="block text-xs font-medium text-gray-700 mb-1"
+                          htmlFor="offline-payment-notes"
+                        >
+                          Notes
+                        </label>
+                        <input
+                          id="offline-payment-notes"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          type="text"
+                          value={offlinePaymentNotes}
+                          onChange={(event) =>
+                            setOfflinePaymentNotes(event.target.value)
+                          }
+                          placeholder="Optional reference or payment note"
+                        />
+                      </div>
+                      <button
+                        className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                        disabled={isRecordingOfflinePayment}
+                        onClick={handleRecordOfflinePayment}
+                        type="button"
+                      >
+                        {isRecordingOfflinePayment
+                          ? 'Saving...'
+                          : 'Mark Current Rent Paid'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {offlinePaymentMessage ? (
+                    <div
+                      className={`mt-4 rounded-md px-3 py-2 text-sm ${
+                        offlinePaymentMessage.type === 'success'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      {offlinePaymentMessage.text}
+                    </div>
+                  ) : null}
+                </div>
+
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Payment History
                 </h3>
@@ -764,3 +889,4 @@ export default function TenantDetailsPage({
     </div>
   );
 }
+

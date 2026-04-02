@@ -4,6 +4,7 @@ import { VisualEditing } from 'next-sanity';
 import { getLayoutSection } from '@/lib/sanity/queries/getLayoutSection';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { Toaster } from '@/components/ui/sonner';
 
 export default async function RootLayout({
   children,
@@ -29,6 +30,7 @@ export default async function RootLayout({
 
         {/* Mobile Bottom Padding - to prevent content from being hidden behind bottom nav */}
         <div className="md:hidden h-16" />
+        <Toaster closeButton richColors position="top-center" />
         {isDraftMode ? <VisualEditing /> : null}
       </body>
     </html>
