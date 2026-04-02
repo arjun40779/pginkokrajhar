@@ -1,8 +1,20 @@
-import { client } from '@/sanity/lib/client';
+import { fetchSanityQuery } from '@/sanity/lib/fetch';
 import type { SanityRoom, SanityImage } from './pgSection';
 import { Room } from '@/components/pages/Rooms';
 
 export type { SanityRoom, SanityImage, SanityAmenity } from './pgSection';
+
+export interface RoomPricingIncludesSectionData {
+  _id: string;
+  title: string;
+  roomAmenities: string[];
+  commonFacilities: string[];
+}
+
+export interface RoomsPageData {
+  rooms: Room[];
+  pricingIncludesSection: RoomPricingIncludesSectionData | null;
+}
 
 // GROQ query for all rooms (customer-facing)
 export const roomListQuery = `
@@ -24,6 +36,38 @@ export const roomListQuery = `
         _id,
         url
       }
+    }
+  }
+`;
+
+export const roomsPageQuery = `
+  {
+    "rooms": *[_type == "room" && isActive == true] | order(_createdAt desc) {
+      _id,
+      dbId,
+      title,
+      slug,
+      description,
+      roomType,
+      maxOccupancy,
+      monthlyRent,
+      securityDeposit,
+      maintenanceCharges,
+      featured,
+      amenities,
+      availabilityStatus,
+      heroImage {
+        asset-> {
+          _id,
+          url
+        }
+      }
+    },
+    "pricingIncludesSection": *[_type == "roomPricingIncludesSection" && isActive == true] | order(_updatedAt desc)[0] {
+      _id,
+      title,
+      roomAmenities,
+      commonFacilities
     }
   }
 `;
@@ -372,7 +416,9 @@ export interface SanityRoomPageDetail extends SanityRoomWithPG {
 // Fetch functions
 export async function getAllRooms(): Promise<Room[]> {
   try {
-    const rooms = await client.fetch<Room[]>(roomListQuery);
+    const rooms = await fetchSanityQuery<Room[]>({
+      query: roomListQuery,
+    });
     return rooms || [];
   } catch (error) {
     console.error('Error fetching rooms from Sanity:', error);
@@ -380,9 +426,30 @@ export async function getAllRooms(): Promise<Room[]> {
   }
 }
 
+export async function getRoomsPageData(): Promise<RoomsPageData> {
+  try {
+    const data = await fetchSanityQuery<RoomsPageData>({
+      query: roomsPageQuery,
+    });
+    return {
+      rooms: data?.rooms || [],
+      pricingIncludesSection: data?.pricingIncludesSection || null,
+    };
+  } catch (error) {
+    console.error('Error fetching rooms page data from Sanity:', error);
+    return {
+      rooms: [],
+      pricingIncludesSection: null,
+    };
+  }
+}
+
 export async function getRoomsByPG(pgDbId: string): Promise<SanityRoom[]> {
   try {
-    const rooms = await client.fetch<SanityRoom[]>(roomsByPGQuery, { pgDbId });
+    const rooms = await fetchSanityQuery<SanityRoom[]>({
+      query: roomsByPGQuery,
+      params: { pgDbId },
+    });
     return rooms || [];
   } catch (error) {
     console.error(`Error fetching rooms for PG ${pgDbId} from Sanity:`, error);
@@ -394,7 +461,10 @@ export async function getRoomByDbId(
   dbId: string,
 ): Promise<SanityRoomWithPG | null> {
   try {
-    return await client.fetch<SanityRoomWithPG>(roomDetailQuery, { dbId });
+    return await fetchSanityQuery<SanityRoomWithPG | null>({
+      query: roomDetailQuery,
+      params: { dbId },
+    });
   } catch (error) {
     console.error(`Error fetching room ${dbId} from Sanity:`, error);
     return null;
@@ -405,8 +475,11 @@ export async function getRoomBySlug(
   slug: string,
 ): Promise<SanityRoomWithPG | null> {
   try {
-    return await client.fetch<SanityRoomWithPG>(roomDetailBySlugQuery, {
-      slug,
+    return await fetchSanityQuery<SanityRoomWithPG | null>({
+      query: roomDetailBySlugQuery,
+      params: {
+        slug,
+      },
     });
   } catch (error) {
     console.error(`Error fetching room ${slug} from Sanity:`, error);
@@ -418,8 +491,11 @@ export async function getRoomPageDetailBySlug(
   slug: string,
 ): Promise<SanityRoomPageDetail | null> {
   try {
-    return await client.fetch<SanityRoomPageDetail>(roomPageDetailBySlugQuery, {
-      slug,
+    return await fetchSanityQuery<SanityRoomPageDetail | null>({
+      query: roomPageDetailBySlugQuery,
+      params: {
+        slug,
+      },
     });
   } catch (error) {
     console.error(

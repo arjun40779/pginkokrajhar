@@ -8,8 +8,10 @@ import { layoutSection } from './document/layoutSection';
 import { pageSection } from './document/pageSection';
 import { contactSection } from './document/contactSection';
 import { contactLocationSection } from './document/contactLocationSection';
+import { contactDetails } from './document/contactDetails';
 import { faqSection } from './document/faqSection';
 import { pgSchema } from './document/pgSchema';
+import { roomPricingIncludesSection } from './document/roomPricingIncludesSection';
 import { roomSchema } from './document/roomSchema';
 import { roomTypeSchema } from './document/roomTypeSchema';
 
@@ -25,8 +27,10 @@ export const schemaTypes = [
   pageSection,
   contactSection,
   contactLocationSection,
+  contactDetails,
   faqSection,
   pgSchema,
+  roomPricingIncludesSection,
   roomSchema,
   roomTypeSchema,
   // Object types

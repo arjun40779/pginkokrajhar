@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
 import { prisma } from '@/prisma';
 import { buildRoomSlug } from '@/lib/rooms/slug';
+import { normalizeMaxOccupancy } from '@/lib/rooms/occupancy';
 
 const isValidDateTime = (value: string) => !Number.isNaN(Date.parse(value));
 
@@ -229,11 +230,19 @@ export async function PUT(
       existingRoom.availabilityStatus,
       validatedData.availabilityStatus,
     );
+    const nextRoomType = validatedData.roomType ?? existingRoom.roomType;
+    const nextMaxOccupancy =
+      validatedData.maxOccupancy ?? existingRoom.maxOccupancy;
+    const normalizedMaxOccupancy = normalizeMaxOccupancy(
+      nextRoomType,
+      nextMaxOccupancy,
+    );
 
     const updatedRoom = await prisma.room.update({
       where: { id: existingRoom.id },
       data: {
         ...validatedData,
+        maxOccupancy: normalizedMaxOccupancy,
         slug,
         availableFrom: validatedData.availableFrom
           ? new Date(validatedData.availableFrom)

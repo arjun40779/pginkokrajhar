@@ -103,13 +103,13 @@ function StatCard({
   subtitle,
   icon: Icon,
   tone,
-}: {
+}: Readonly<{
   title: string;
   value: string | number;
   subtitle: string;
   icon: typeof Building2;
   tone: string;
-}) {
+}>) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -483,7 +483,8 @@ export function Dashboard() {
                     className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                   >
                     <p className="text-sm text-slate-900">
-                      {inquiry.name} enquired about {inquiry.pg?.name || 'a PG'}
+                      {inquiry.name} enquired about{' '}
+                      {inquiry.pg?.name || 'the contact form'}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {new Date(inquiry.createdAt).toLocaleString('en-IN')}

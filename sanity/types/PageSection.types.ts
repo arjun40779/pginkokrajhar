@@ -12,6 +12,7 @@ export interface PageMetadata {
   pageTitle?: string;
   pageDescription?: string;
   ogImage?: SanityImage;
+  ogImageUrl?: string;
   customMetaTags?: string;
 }
 

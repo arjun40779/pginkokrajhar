@@ -320,11 +320,7 @@ export const homePageQuery = `
         _type == "heroSection" => {
           _type,
           _id,
-          badge->{
-            show,
-            icon,
-            text
-          },
+          badge,
           mainTitle,
           subtitle,
           ctaButtons[] {

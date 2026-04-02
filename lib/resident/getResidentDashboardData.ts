@@ -1,6 +1,7 @@
 import { User } from '@supabase/supabase-js';
 import { prisma } from '@/prisma';
 import { ResidentDashboardResponse } from './dashboard.types';
+import { getResidentRentPaymentState } from './rentPaymentState';
 
 type AuthUser = Pick<User, 'id' | 'email' | 'user_metadata'>;
 
@@ -10,7 +11,8 @@ type BookingFilter = {
 };
 
 function toSerializable<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+  const serialized = JSON.stringify(value);
+  return structuredClone(JSON.parse(serialized) as T);
 }
 
 async function getOrCreateProfile(authUser: AuthUser) {
@@ -25,12 +27,14 @@ async function getOrCreateProfile(authUser: AuthUser) {
   }
 
   const metadata = (authUser.user_metadata || {}) as Record<string, unknown>;
-  const mobile =
-    typeof metadata.mobile === 'string'
-      ? metadata.mobile
-      : typeof metadata.phone === 'string'
-        ? metadata.phone
-        : '';
+  let mobile = '';
+
+  if (typeof metadata.mobile === 'string') {
+    mobile = metadata.mobile;
+  } else if (typeof metadata.phone === 'string') {
+    mobile = metadata.phone;
+  }
+
   const name =
     typeof metadata.name === 'string' ? metadata.name : authUser.email || null;
 
@@ -109,35 +113,28 @@ export async function getResidentDashboardData(
     paymentsPromise,
   ]);
 
-  const pendingAmount = payments
-    .filter((payment) => payment.status === 'PENDING')
-    .reduce((sum, payment) => sum + Number(payment.amount), 0);
-
-  const lastPayment = payments.find(
-    (payment) => payment.status === 'COMPLETED',
+  const rentState = getResidentRentPaymentState(
+    tenant
+      ? {
+          moveInDate: tenant.moveInDate,
+          rentAmount: tenant.rentAmount,
+        }
+      : null,
+    payments,
+    bookings,
   );
-
-  let nextDueDate: Date | number | null = null;
-
-  if (lastPayment) {
-    nextDueDate = new Date(
-      lastPayment.paymentDate || lastPayment.createdAt,
-    ).setMonth(
-      new Date(lastPayment.paymentDate || lastPayment.createdAt).getMonth() + 1,
-    );
-  } else if (tenant) {
-    nextDueDate = new Date();
-  }
 
   return toSerializable({
     profile,
     tenant,
     bookings,
     payments,
-    pendingAmount,
-    nextDueDate,
+    pendingAmount: rentState.pendingAmount,
+    nextDueDate: rentState.nextDueDate,
     monthlyRent: tenant?.rentAmount ?? 0,
-    rentStatus: tenant?.rentStatus ?? 'PENDING',
+    rentStatus: rentState.rentStatus,
+    currentRentPeriod: rentState.currentPeriod,
+    rentCycle: rentState.currentCycle,
   });
 }
 

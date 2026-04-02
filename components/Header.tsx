@@ -1,4 +1,5 @@
 'use client';
+import { stegaClean } from '@sanity/client/stega';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -26,6 +27,10 @@ import { HeaderSection } from '@/sanity/types';
 
 interface HeaderProps {
   headerData?: HeaderSection | null;
+}
+
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
 }
 
 const Header: React.FC<HeaderProps> = ({ headerData }) => {
@@ -60,16 +65,16 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
   // Find contact item for mobile top-right placement
   const contactItem = data?.navigation?.find(
     (item) =>
-      item.url?.toLowerCase().includes('/contact') ||
-      item.label?.toLowerCase().includes('contact'),
+      cleanCmsString(item.url).toLowerCase().includes('/contact') ||
+      cleanCmsString(item.label).toLowerCase().includes('contact'),
   );
 
   // Filter out contact item from bottom navigation
   const bottomNavItems = data?.navigation
     ?.filter(
       (item) =>
-        !item.url?.toLowerCase().includes('/contact') &&
-        !item.label?.toLowerCase().includes('contact'),
+        !cleanCmsString(item.url).toLowerCase().includes('/contact') &&
+        !cleanCmsString(item.label).toLowerCase().includes('contact'),
     )
     .slice(0, 4); // Limit to 4 items to keep layout balanced
 
@@ -90,12 +95,16 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
               {data?.navigation?.map((item) => {
-                const Icon = iconMap[item.icon] || MoreHorizontal; // Fallback to MoreHorizontal
-                const isActive = pathname === item.url;
+                const itemIcon = cleanCmsString(item.icon);
+                const itemUrl = cleanCmsString(item.url) || '/';
+                const itemLabel = cleanCmsString(item.label);
+                const Icon = iconMap[itemIcon] || MoreHorizontal;
+                const isActive = pathname === itemUrl;
+
                 return (
                   <Link
-                    key={item.url}
-                    href={item.url}
+                    key={`${itemUrl}-${itemLabel}`}
+                    href={itemUrl}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors ${
                       isActive
                         ? 'text-blue-600 bg-blue-50'
@@ -103,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span>{itemLabel}</span>
                   </Link>
                 );
               })}
@@ -113,19 +122,21 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
             {contactItem && (
               <div className="md:hidden">
                 <Link
-                  href={contactItem.url}
+                  href={cleanCmsString(contactItem.url) || '/contact'}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 border-2 shadow-sm ${
-                    pathname === contactItem.url
+                    pathname === cleanCmsString(contactItem.url)
                       ? 'text-white bg-blue-600 border-blue-600 shadow-md'
                       : 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 active:bg-blue-200 active:scale-95'
                   }`}
                 >
                   {(() => {
-                    const Icon = iconMap[contactItem.icon] || MoreHorizontal;
+                    const Icon =
+                      iconMap[cleanCmsString(contactItem.icon)] ||
+                      MoreHorizontal;
                     return <Icon className="h-4 w-4" />;
                   })()}
                   <span className="text-sm font-medium">
-                    {contactItem.label}
+                    {cleanCmsString(contactItem.label)}
                   </span>
                 </Link>
               </div>
@@ -138,12 +149,16 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
         <div className="flex h-16">
           {bottomNavItems?.map((item) => {
-            const Icon = iconMap[item.icon] || MoreHorizontal; // Fallback to MoreHorizontal
-            const isActive = pathname === item.url;
+            const itemIcon = cleanCmsString(item.icon);
+            const itemUrl = cleanCmsString(item.url) || '/';
+            const itemLabel = cleanCmsString(item.label);
+            const Icon = iconMap[itemIcon] || MoreHorizontal;
+            const isActive = pathname === itemUrl;
+
             return (
               <Link
-                key={item.url}
-                href={item.url}
+                key={`${itemUrl}-${itemLabel}`}
+                href={itemUrl}
                 className={`flex-1 flex flex-col items-center justify-center py-2 px-1 transition-all duration-200 ${
                   isActive
                     ? 'text-blue-600 bg-blue-50'
@@ -156,7 +171,7 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
                 <span
                   className={`text-xs mt-1 text-center leading-tight ${isActive ? 'font-medium' : 'font-normal'}`}
                 >
-                  {item.label}
+                  {itemLabel}
                 </span>
               </Link>
             );

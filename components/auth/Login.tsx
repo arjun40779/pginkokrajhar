@@ -7,13 +7,31 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { Alert, AlertDescription } from '../ui/alert';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface LoginProps {
   nextPath?: string | null;
   oauthError?: string | null;
+}
+
+function getLoginErrorMessage(message: string, code?: string) {
+  const normalized = (code || message).toLowerCase();
+
+  if (normalized.includes('invalid_credentials')) {
+    return 'Wrong email or password, or this user does not exist.';
+  }
+
+  if (normalized.includes('email not confirmed')) {
+    return 'Email is not confirmed yet. Please verify your inbox first.';
+  }
+
+  if (normalized.includes('too_many_requests')) {
+    return 'Too many attempts. Wait a moment and try again.';
+  }
+
+  return message || 'Unable to sign in. Please try again.';
 }
 
 export default function Login({
@@ -24,7 +42,6 @@ export default function Login({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const router = useRouter();
   const supabase = createClient();
 
@@ -33,27 +50,31 @@ export default function Login({
       return;
     }
 
+    let oauthMessage: string;
+
     switch (oauthError) {
       case 'oauth_failed':
-        setError('Google sign-in failed. Please try again.');
+        oauthMessage = 'Google sign-in failed. Please try again.';
         break;
       case 'no_code':
-        setError(
-          'Authorization code not received. Please try signing in again.',
-        );
+        oauthMessage =
+          'Authorization code not received. Please try signing in again.';
         break;
       case 'oauth_callback_error':
-        setError('Sign-in callback failed. Please try again.');
+        oauthMessage = 'Sign-in callback failed. Please try again.';
         break;
       default:
-        setError('An error occurred during sign-in. Please try again.');
+        oauthMessage = 'An error occurred during sign-in. Please try again.';
     }
+
+    toast.error('Login failed', {
+      description: oauthMessage,
+    });
   }, [oauthError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
@@ -61,7 +82,13 @@ export default function Login({
     });
 
     if (signInError) {
-      setError(signInError.message);
+      const errorMessage = getLoginErrorMessage(
+        signInError.message,
+        signInError.code,
+      );
+      toast.error('Login failed', {
+        description: errorMessage,
+      });
       setLoading(false);
       return;
     }
@@ -83,13 +110,19 @@ export default function Login({
       console.error('Error loading user profile after login:', profileError);
     }
 
-    router.push(destination);
-    setLoading(false);
+    toast.success('Login successful', {
+      description: `Redirecting you to ${destination === '/admin/dashboard' ? 'the admin dashboard' : 'your dashboard'}.`,
+    });
+
+    setTimeout(() => {
+      router.push(destination);
+      router.refresh();
+      setLoading(false);
+    }, 350);
   };
 
   const handleGoogleAuth = async () => {
     setLoading(true);
-    setError('');
 
     const { error: googleError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -101,7 +134,13 @@ export default function Login({
     });
 
     if (googleError) {
-      setError(googleError.message);
+      const errorMessage = getLoginErrorMessage(
+        googleError.message,
+        googleError.code,
+      );
+      toast.error('Google sign-in failed', {
+        description: errorMessage,
+      });
       setLoading(false);
     }
   };
@@ -147,12 +186,6 @@ export default function Login({
               Enter your credentials to access your account
             </p>
           </div>
-
-          {error ? (
-            <Alert className="mb-6" variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
 
           {/* Google Auth Button */}
           <Button

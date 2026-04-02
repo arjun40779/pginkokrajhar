@@ -3,12 +3,22 @@
  */
 
 import { defineConfig } from 'sanity';
+import { presentationTool, defineLocations } from 'sanity/presentation';
 import { structureTool } from 'sanity/structure';
 import { visionTool } from '@sanity/vision';
 
 import { dataset, projectId } from './sanity/env';
+import {
+  getPresentationAllowOrigins,
+  getPresentationPreviewUrl,
+  resolvePageHref,
+} from './sanity/lib/visual-editing';
 import { schemaTypes } from './sanity/schemaTypes';
 import { structure } from './sanity/structure';
+
+const homeLocation = { title: 'Homepage', href: '/' };
+const contactLocation = { title: 'Contact page', href: '/contact' };
+const roomsLocation = { title: 'Rooms page', href: '/rooms' };
 
 export default defineConfig({
   basePath: '/studio',
@@ -19,6 +29,74 @@ export default defineConfig({
     structureTool({
       structure,
       title: 'Content',
+    }),
+    presentationTool({
+      allowOrigins: getPresentationAllowOrigins(),
+      previewUrl: getPresentationPreviewUrl(),
+      resolve: {
+        locations: {
+          layoutSection: { locations: [homeLocation] },
+          headerSection: { locations: [homeLocation] },
+          footerSection: { locations: [homeLocation] },
+          heroSection: { locations: [homeLocation] },
+          amenitiesSection: { locations: [homeLocation] },
+          facilitiesSection: { locations: [homeLocation] },
+          featuresCtaSection: { locations: [homeLocation] },
+          pageSection: defineLocations({
+            select: {
+              title: 'title',
+              slug: 'slug.current',
+            },
+            resolve: (document) => ({
+              locations: [
+                {
+                  title: document?.title || 'Page',
+                  href: resolvePageHref(document?.slug),
+                },
+              ],
+            }),
+          }),
+          contactSection: { locations: [contactLocation] },
+          contactLocationSection: { locations: [contactLocation] },
+          faqSection: { locations: [contactLocation] },
+          contactDetails: { locations: [contactLocation] },
+          roomPricingIncludesSection: { locations: [roomsLocation] },
+          pg: defineLocations({
+            select: {
+              title: 'name',
+              dbId: 'dbId',
+              slug: 'slug.current',
+            },
+            resolve: (document) => ({
+              locations: [
+                {
+                  title: document?.title || 'PG details',
+                  href: document?.dbId
+                    ? `/pg/${document.dbId}`
+                    : resolvePageHref(document?.slug || '/rooms'),
+                },
+                roomsLocation,
+              ],
+            }),
+          }),
+          room: defineLocations({
+            select: {
+              title: 'title',
+              slug: 'slug.current',
+            },
+            resolve: (document) => ({
+              locations: [
+                {
+                  title: document?.title || 'Room details',
+                  href: document?.slug
+                    ? `/rooms/${document.slug}`
+                    : roomsLocation.href,
+                },
+              ],
+            }),
+          }),
+        },
+      },
     }),
     visionTool({ defaultApiVersion: '2024-01-01' }),
   ],

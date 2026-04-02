@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { syncRoomToSanity } from '@/utils/santitySync';
 import { prisma } from '@/prisma';
 import { buildRoomSlug } from '@/lib/rooms/slug';
+import { normalizeMaxOccupancy } from '@/lib/rooms/occupancy';
 
 const isValidDateTime = (value: string) => !Number.isNaN(Date.parse(value));
 const isValidUuid = (value: string) =>
@@ -149,6 +150,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = roomCreateSchema.parse(body);
+    const normalizedMaxOccupancy = normalizeMaxOccupancy(
+      validatedData.roomType,
+      validatedData.maxOccupancy,
+    );
 
     // Check if PG exists
     const pg = await prisma.pG.findUnique({
@@ -185,6 +190,7 @@ export async function POST(request: NextRequest) {
     const room = await prisma.room.create({
       data: {
         ...validatedData,
+        maxOccupancy: normalizedMaxOccupancy,
         slug,
         availableFrom: validatedData.availableFrom
           ? new Date(validatedData.availableFrom)

@@ -1,7 +1,12 @@
 import { CheckCircle, ArrowRight, UserCircle } from 'lucide-react';
+import { stegaClean } from '@sanity/client/stega';
 import Link from 'next/link';
 import { Button } from '../ui/button';
 import { FeaturesCtaSection } from '@/sanity/types';
+
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
+}
 
 const FeaturesCTAs = ({ data }: { data: FeaturesCtaSection }) => {
   const { featuresTitle, ctaCards, features } = data;
@@ -43,7 +48,10 @@ const FeaturesCTAs = ({ data }: { data: FeaturesCtaSection }) => {
                   {card1?.title}
                 </h3>
                 <p className="text-gray-700 mb-6">{card1?.description}</p>
-                <Link href={card1?.buttonUrl || '#'} className="w-full ">
+                <Link
+                  href={cleanCmsString(card1?.buttonUrl) || '#'}
+                  className="w-full "
+                >
                   <Button size="lg" className="w-full bg-black text-white">
                     {card1?.buttonText}
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -55,14 +63,22 @@ const FeaturesCTAs = ({ data }: { data: FeaturesCtaSection }) => {
                     card1?.footerLinkText &&
                     card1?.footerLinkUrl ? (
                       <>
-                        {card1.footerText.split(card1.footerLinkText)[0]}
+                        {
+                          cleanCmsString(card1.footerText).split(
+                            cleanCmsString(card1.footerLinkText),
+                          )[0]
+                        }
                         <Link
-                          href={card1.footerLinkUrl}
+                          href={cleanCmsString(card1.footerLinkUrl)}
                           className="text-blue-600 hover:underline "
                         >
                           {card1.footerLinkText}
                         </Link>
-                        {card1.footerText.split(card1.footerLinkText)[1]}
+                        {
+                          cleanCmsString(card1.footerText).split(
+                            cleanCmsString(card1.footerLinkText),
+                          )[1]
+                        }
                       </>
                     ) : (
                       card1?.footerText
@@ -79,7 +95,7 @@ const FeaturesCTAs = ({ data }: { data: FeaturesCtaSection }) => {
                   {card2?.title}
                 </h3>
                 <p className="text-gray-700 mb-6">{card2?.description}</p>
-                <Link href={card2?.buttonUrl || '#'}>
+                <Link href={cleanCmsString(card2?.buttonUrl) || '#'}>
                   <Button
                     size="lg"
                     className="w-full bg-green-600 hover:bg-green-700 text-white"

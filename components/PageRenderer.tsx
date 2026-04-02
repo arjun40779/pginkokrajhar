@@ -1,9 +1,6 @@
 import React from 'react';
-import {
-  PageData,
-  PageSection,
-  HeroSectionData,
-} from '@/lib/sanity/queries/pageSection';
+import { stegaClean } from '@sanity/client/stega';
+import type { PageSectionResponse } from '@/sanity/types';
 
 // Import all section components
 import { Hero } from '@/components/sections/Hero';
@@ -13,17 +10,21 @@ import FeaturesCTAs from './sections/FeaturesCTAs';
 import ContactLocationSection from './sections/ContactLocationSection';
 
 interface PageRendererProps {
-  pageData: PageData;
+  pageData: PageSectionResponse;
 }
 
 interface SectionWrapperProps {
-  section: PageSection;
+  section: PageSectionResponse['sections'][number];
   children: React.ReactNode;
 }
 
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
+}
+
 // Wrapper component to apply custom settings per section
-function SectionWrapper({ section, children }: SectionWrapperProps) {
-  const customBgClass = section.customSettings?.backgroundColor || '';
+function SectionWrapper({ section, children }: Readonly<SectionWrapperProps>) {
+  const customBgClass = cleanCmsString(section.customSettings?.backgroundColor);
   const customPaddingClass = section.customSettings?.paddingOverride || '';
   const customMarginClass = section.customSettings?.marginOverride || '';
 
@@ -39,17 +40,24 @@ function SectionWrapper({ section, children }: SectionWrapperProps) {
 }
 
 // Individual section renderers
-function HeroRenderer({ sectionData }: { sectionData: HeroSectionData }) {
+function HeroRenderer({
+  sectionData,
+}: Readonly<{
+  sectionData: PageSectionResponse['sections'][number]['sectionData'];
+}>) {
   return <Hero heroData={sectionData as any} />;
 }
 
 // Main section renderer that decides which component to use
-function SectionRenderer({ section }: { section: PageSection }) {
+function SectionRenderer({
+  section,
+}: Readonly<{ section: PageSectionResponse['sections'][number] }>) {
   const { sectionData } = section;
+  const sectionType = cleanCmsString(sectionData?._type);
 
-  switch (sectionData._type) {
+  switch (sectionType) {
     case 'heroSection':
-      return <HeroRenderer sectionData={sectionData as HeroSectionData} />;
+      return <HeroRenderer sectionData={sectionData} />;
     case 'amenitiesSection':
       return <AmenitiesSection sectionData={sectionData as any} />;
     case 'facilitiesSection':
@@ -57,15 +65,15 @@ function SectionRenderer({ section }: { section: PageSection }) {
     case 'featuresCtaSection':
       return <FeaturesCTAs data={sectionData as any} />;
     case 'contactLocationSection':
-      return <ContactLocationSection sectionData={sectionData as any} />;
+      return <ContactLocationSection data={sectionData as any} />;
     default:
-      console.warn(`Unknown section type: ${(sectionData as any)._type}`);
+      console.warn(`Unknown section type: ${sectionType}`);
       return null;
   }
 }
 
-export function PageRenderer({ pageData }: PageRendererProps) {
-  if (!pageData || !pageData?.sections || pageData?.sections?.length === 0) {
+export function PageRenderer({ pageData }: Readonly<PageRendererProps>) {
+  if (!pageData?.sections?.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -84,7 +92,7 @@ export function PageRenderer({ pageData }: PageRendererProps) {
     <main className="flex-grow">
       {pageData.sections.map((section, index) => (
         <SectionWrapper
-          key={`${section.sectionType}-${index}`}
+          key={`${cleanCmsString(section.sectionType)}-${index}`}
           section={section}
         >
           <SectionRenderer section={section} />

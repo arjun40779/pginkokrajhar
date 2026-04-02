@@ -159,12 +159,12 @@ model Inquiry {
   phone     String
   email     String?
   message   String?
-  pgId      String
+  pgId      String?
   status    InquiryStatus @default(NEW)
   source    String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
-  pg        PG            @relation(fields: [pgId], references: [id])
+  pg        PG?           @relation(fields: [pgId], references: [id])
 
   @@map("inquiries")
 }

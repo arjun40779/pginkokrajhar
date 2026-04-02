@@ -2,28 +2,31 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
-  Bath,
   BedDouble,
   Building2,
   Calendar,
   Camera,
-  Clock3,
   IndianRupee,
   MapPin,
   Shield,
   Users,
   Wifi,
-  Wind,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   getRoomPageDetailBySlug,
   type SanityRoomPageDetail,
 } from '@/lib/sanity/queries/roomSection';
 import {
+  getActiveContactDetails,
+  type ContactDetailsData,
+} from '@/lib/sanity/queries/contactDetails';
+import {
   formatRoomAvailabilityLabel,
   isRoomAvailableForBooking,
+  normalizeRoomAvailabilityStatus,
 } from '@/lib/rooms/availability';
+import { RoomDetailActionButtons } from '@/components/RoomDetailActionButtons';
+import { prisma } from '@/prisma';
 
 export const revalidate = 60;
 
@@ -37,36 +40,118 @@ interface RoomPageViewModel {
     | NonNullable<SanityRoomPageDetail['images']>[number]
     | SanityRoomPageDetail['heroImage'];
   galleryImages: NonNullable<SanityRoomPageDetail['images']>;
-  roomFeatures: string[];
+  roomHighlights: string[];
   roomContent: string[];
   pgContent: string[];
   checkoutHref: string | null;
   canCheckout: boolean;
-  inquireHref: string;
+  ownerPhone: string | null;
   roomTypeLabel: string;
   availabilityLabel: string;
   genderLabel: string | null;
+  maxOccupancy: number;
+  currentOccupancy: number;
+  monthlyRent: number;
+}
+
+interface LiveRoomCheckoutState {
+  canCheckout: boolean;
+  availabilityLabel?: string;
+  maxOccupancy?: number;
+  currentOccupancy?: number;
+  monthlyRent?: number;
+}
+
+interface RoomDetailContentProps {
+  room: SanityRoomPageDetail;
+  viewModel: RoomPageViewModel;
+  contactDetails: ContactDetailsData | null;
+}
+
+interface HeroPanelProps {
+  room: SanityRoomPageDetail;
+  viewModel: RoomPageViewModel;
+  contactDetails: ContactDetailsData | null;
 }
 
 export default async function RoomDetailPage({ params }: Readonly<Props>) {
-  const room = await getRoomPageDetailBySlug(params.slug);
+  const [room, contactDetails] = await Promise.all([
+    getRoomPageDetailBySlug(params.slug),
+    getActiveContactDetails(),
+  ]);
 
   if (!room) {
     notFound();
   }
 
-  const viewModel = buildRoomPageViewModel(room);
+  const liveCheckoutState = await getLiveRoomCheckoutState(
+    room.dbId,
+    room.pgReference?.dbId,
+  );
+  const viewModel = buildRoomPageViewModel(room, liveCheckoutState);
 
-  return <RoomDetailContent room={room} viewModel={viewModel} />;
+  return (
+    <RoomDetailContent
+      room={room}
+      viewModel={viewModel}
+      contactDetails={contactDetails}
+    />
+  );
+}
+
+async function getLiveRoomCheckoutState(
+  roomDbId?: string,
+  pgDbId?: string,
+): Promise<LiveRoomCheckoutState | null> {
+  if (!roomDbId) {
+    return null;
+  }
+
+  const room = await prisma.room.findFirst({
+    where: {
+      id: roomDbId,
+      isActive: true,
+      ...(pgDbId ? { pgId: pgDbId } : {}),
+    },
+    select: {
+      availabilityStatus: true,
+      currentOccupancy: true,
+      maxOccupancy: true,
+      monthlyRent: true,
+    },
+  });
+
+  if (!room) {
+    return {
+      canCheckout: false,
+      availabilityLabel: 'Unavailable',
+    };
+  }
+
+  const normalizedStatus = normalizeRoomAvailabilityStatus(
+    room.availabilityStatus,
+    room.currentOccupancy,
+    room.maxOccupancy,
+  );
+
+  return {
+    canCheckout: isRoomAvailableForBooking(
+      room.availabilityStatus,
+      room.currentOccupancy,
+      room.maxOccupancy,
+    ),
+    availabilityLabel: formatRoomAvailabilityLabel(normalizedStatus),
+    maxOccupancy: room.maxOccupancy,
+    currentOccupancy: room.currentOccupancy,
+    monthlyRent: Number(room.monthlyRent),
+  };
 }
 
 function RoomDetailContent({
   room,
   viewModel,
-}: Readonly<{
-  room: SanityRoomPageDetail;
-  viewModel: RoomPageViewModel;
-}>) {
+  contactDetails,
+}: Readonly<RoomDetailContentProps>) {
   const { roomTitle, galleryImages, roomContent, pgContent, genderLabel } =
     viewModel;
 
@@ -81,7 +166,11 @@ function RoomDetailContent({
           Back to all rooms
         </Link>
 
-        <HeroPanel room={room} viewModel={viewModel} />
+        <HeroPanel
+          room={room}
+          viewModel={viewModel}
+          contactDetails={contactDetails}
+        />
         <GallerySection images={galleryImages} roomTitle={roomTitle} />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
@@ -104,33 +193,36 @@ function RoomDetailContent({
 function HeroPanel({
   room,
   viewModel,
-}: Readonly<{
-  room: SanityRoomPageDetail;
-  viewModel: RoomPageViewModel;
-}>) {
+  contactDetails,
+}: Readonly<HeroPanelProps>) {
   const {
     heroImage,
     roomTitle,
     roomTypeLabel,
     availabilityLabel,
-    roomFeatures,
+    roomHighlights,
     checkoutHref,
     canCheckout,
-    inquireHref,
+    monthlyRent,
   } = viewModel;
+  const dialogContactDetails = {
+    whatsappNumber: contactDetails?.whatsappNumber ?? null,
+    phoneNumber: contactDetails?.phoneNumber ?? viewModel.ownerPhone,
+    email: contactDetails?.email ?? room.pgReference?.ownerEmail ?? null,
+  };
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-gray-200">
-      <div className="grid gap-0 lg:grid-cols-[1.3fr_0.7fr]">
-        <div className="border-b border-gray-200 bg-gray-100 lg:border-b-0 lg:border-r">
+      <div className="grid gap-0 lg:items-start lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="self-start border-b border-gray-200 bg-gray-100 lg:h-[460px] lg:border-b-0 lg:border-r">
           {heroImage?.asset.url ? (
             <img
               src={heroImage.asset.url}
               alt={heroImage.alt ?? roomTitle}
-              className="h-full min-h-[320px] w-full object-cover"
+              className="h-[320px] w-full object-cover sm:h-[320px] lg:h-full"
             />
           ) : (
-            <div className="flex min-h-[320px] items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="flex h-[320px] items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 sm:h-[420px] lg:h-full">
               <BedDouble className="h-20 w-20 text-blue-200" />
             </div>
           )}
@@ -154,11 +246,11 @@ function HeroPanel({
 
           <h1 className="text-3xl font-bold text-gray-900">{roomTitle}</h1>
 
-          <HeroMeta room={room} />
+          <HeroMeta room={room} viewModel={viewModel} />
 
           <div className="mt-6 flex items-center text-3xl font-bold text-blue-600">
             <IndianRupee className="h-6 w-6" />
-            {room.monthlyRent.toLocaleString()}
+            {monthlyRent.toLocaleString()}
             <span className="ml-2 text-sm font-medium text-gray-500">
               per month
             </span>
@@ -170,9 +262,9 @@ function HeroPanel({
             </p>
           ) : null}
 
-          {roomFeatures.length > 0 ? (
+          {roomHighlights.length > 0 ? (
             <div className="mt-6 flex flex-wrap gap-2">
-              {roomFeatures.map((feature) => (
+              {roomHighlights.map((feature) => (
                 <span
                   key={feature}
                   className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
@@ -183,10 +275,11 @@ function HeroPanel({
             </div>
           ) : null}
 
-          <ActionButtons
+          <RoomDetailActionButtons
             canCheckout={canCheckout}
             checkoutHref={checkoutHref}
-            inquireHref={inquireHref}
+            contactDetails={dialogContactDetails}
+            roomTitle={roomTitle}
             pgSlug={room.pgReference?.slug?.current}
           />
         </div>
@@ -195,7 +288,13 @@ function HeroPanel({
   );
 }
 
-function HeroMeta({ room }: Readonly<{ room: SanityRoomPageDetail }>) {
+function HeroMeta({
+  room,
+  viewModel,
+}: Readonly<{
+  room: SanityRoomPageDetail;
+  viewModel: RoomPageViewModel;
+}>) {
   const locationParts = [
     room.pgReference?.name,
     room.pgReference?.area,
@@ -212,49 +311,13 @@ function HeroMeta({ room }: Readonly<{ room: SanityRoomPageDetail }>) {
       ) : null}
       <p className="flex items-center">
         <Users className="mr-2 h-4 w-4" />
-        Up to {room.maxOccupancy} residents
+        Up to {viewModel.maxOccupancy} residents
       </p>
       {room.availableFrom ? (
         <p className="flex items-center">
           <Calendar className="mr-2 h-4 w-4" />
           Available from {formatDate(room.availableFrom)}
         </p>
-      ) : null}
-    </div>
-  );
-}
-
-function ActionButtons({
-  canCheckout,
-  checkoutHref,
-  inquireHref,
-  pgSlug,
-}: Readonly<{
-  canCheckout: boolean;
-  checkoutHref: string | null;
-  inquireHref: string;
-  pgSlug?: string;
-}>) {
-  return (
-    <div className="mt-8 flex flex-wrap gap-3">
-      {canCheckout && checkoutHref ? (
-        <Button asChild size="lg" className="min-w-[160px]">
-          <Link href={checkoutHref}>Checkout</Link>
-        </Button>
-      ) : (
-        <Button size="lg" disabled className="min-w-[160px]">
-          Checkout Unavailable
-        </Button>
-      )}
-
-      <Button asChild size="lg" variant="outline" className="min-w-[160px]">
-        <Link href={inquireHref}>Inquire</Link>
-      </Button>
-
-      {pgSlug ? (
-        <Button asChild size="lg" variant="ghost">
-          <Link href={`/pg/${pgSlug}`}>View PG Details</Link>
-        </Button>
       ) : null}
     </div>
   );
@@ -474,7 +537,8 @@ function SidebarSection({
   room: SanityRoomPageDetail;
   viewModel: RoomPageViewModel;
 }>) {
-  const { roomTypeLabel, availabilityLabel } = viewModel;
+  const { roomTypeLabel, availabilityLabel, maxOccupancy, currentOccupancy } =
+    viewModel;
 
   return (
     <aside className="space-y-6">
@@ -486,12 +550,9 @@ function SidebarSection({
           {room.roomSize
             ? renderFact('Room Size', `${room.roomSize} sq ft`)
             : null}
-          {renderFact('Max Occupancy', `${room.maxOccupancy} residents`)}
-          {room.currentOccupancy > 0
-            ? renderFact(
-                'Current Occupancy',
-                `${room.currentOccupancy} residents`,
-              )
+          {renderFact('Max Occupancy', `${maxOccupancy} residents`)}
+          {currentOccupancy > 0
+            ? renderFact('Current Occupancy', `${currentOccupancy} residents`)
             : null}
           {room.floor ? renderFact('Floor', `Floor ${room.floor}`) : null}
           {room.windowDirection
@@ -508,34 +569,14 @@ function SidebarSection({
             : null}
         </div>
       </section>
-
-      {room.pgReference ? (
-        <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">PG Inclusions</h2>
-          <div className="mt-4 space-y-3 text-sm text-gray-700">
-            {room.pgReference.wifiIncluded
-              ? renderIconFact(Wifi, 'WiFi included')
-              : null}
-            {room.pgReference.electricityIncluded
-              ? renderIconFact(Wind, 'Electricity included')
-              : null}
-            {room.hasAttachedBath
-              ? renderIconFact(Bath, 'Attached bathroom')
-              : null}
-            {room.pgReference.gateClosingTime
-              ? renderIconFact(
-                  Clock3,
-                  `Gate closes at ${room.pgReference.gateClosingTime}`,
-                )
-              : null}
-          </div>
-        </section>
-      ) : null}
     </aside>
   );
 }
 
-function buildRoomPageViewModel(room: SanityRoomPageDetail): RoomPageViewModel {
+function buildRoomPageViewModel(
+  room: SanityRoomPageDetail,
+  liveCheckoutState: LiveRoomCheckoutState | null,
+): RoomPageViewModel {
   const roomTitle = room.title || `Room ${room.roomNumber}`;
   const heroImage =
     room.heroImage || room.images?.[0] || room.pgReference?.images?.[0];
@@ -549,60 +590,58 @@ function buildRoomPageViewModel(room: SanityRoomPageDetail): RoomPageViewModel {
         (candidate) => candidate?.asset?._id === image?.asset?._id,
       ) === index,
   );
-  const roomFeatures = [
-    room.hasAttachedBath ? 'Attached Bath' : null,
-    room.hasAC ? 'AC' : null,
-    room.hasBalcony ? 'Balcony' : null,
-    room.hasFan ? 'Ceiling Fan' : null,
-  ].filter(Boolean) as string[];
+  const roomHighlights = Array.from(
+    new Set([
+      ...(room.amenities ?? []),
+      ...((room.features ?? [])
+        .filter((feature) => feature.available)
+        .map((feature) => feature.name) ?? []),
+    ]),
+  ).slice(0, 6);
   const roomContent = extractPortableTextParagraphs(room.content);
   const pgContent = extractPortableTextParagraphs(room.pgReference?.content);
+  const liveMaxOccupancy = liveCheckoutState?.maxOccupancy ?? room.maxOccupancy;
+  const liveCurrentOccupancy =
+    liveCheckoutState?.currentOccupancy ?? room.currentOccupancy;
+  const liveMonthlyRent = liveCheckoutState?.monthlyRent ?? room.monthlyRent;
   const checkoutHref =
     room.pgReference?.dbId && room.dbId
-      ? `/booking?pgId=${room.pgReference.dbId}&roomId=${room.dbId}&rent=${room.monthlyRent}`
+      ? `/booking?pgId=${room.pgReference.dbId}&roomId=${room.dbId}&rent=${liveMonthlyRent}`
       : null;
+  const defaultCanCheckout = isRoomAvailableForBooking(
+    room.availabilityStatus,
+    liveCurrentOccupancy,
+    liveMaxOccupancy,
+  );
+  const canCheckout =
+    (liveCheckoutState?.canCheckout ?? defaultCanCheckout) &&
+    Boolean(checkoutHref);
 
   return {
     roomTitle,
     heroImage,
     galleryImages,
-    roomFeatures,
+    roomHighlights,
     roomContent,
     pgContent,
     checkoutHref,
-    canCheckout:
-      isRoomAvailableForBooking(
-        room.availabilityStatus,
-        room.currentOccupancy,
-        room.maxOccupancy,
-      ) && Boolean(checkoutHref),
-    inquireHref: getInquireHref(room),
+    canCheckout,
+    ownerPhone: room.pgReference?.ownerPhone ?? null,
     roomTypeLabel: formatEnumLabel(room.roomType),
-    availabilityLabel: formatRoomAvailabilityLabel(
-      room.availabilityStatus,
-      room.currentOccupancy,
-      room.maxOccupancy,
-    ),
+    availabilityLabel:
+      liveCheckoutState?.availabilityLabel ??
+      formatRoomAvailabilityLabel(
+        room.availabilityStatus,
+        liveCurrentOccupancy,
+        liveMaxOccupancy,
+      ),
     genderLabel: room.pgReference?.genderRestriction
       ? formatEnumLabel(room.pgReference.genderRestriction)
       : null,
+    maxOccupancy: liveMaxOccupancy,
+    currentOccupancy: liveCurrentOccupancy,
+    monthlyRent: Number(liveMonthlyRent),
   };
-}
-
-function getInquireHref(room: SanityRoomPageDetail) {
-  if (room.pgReference?.ownerPhone) {
-    return `tel:${room.pgReference.ownerPhone}`;
-  }
-
-  if (room.pgReference?.ownerEmail) {
-    return `mailto:${room.pgReference.ownerEmail}`;
-  }
-
-  if (room.pgReference?.slug?.current) {
-    return `/pg/${room.pgReference.slug.current}`;
-  }
-
-  return '/contact';
 }
 
 function formatEnumLabel(value: string) {

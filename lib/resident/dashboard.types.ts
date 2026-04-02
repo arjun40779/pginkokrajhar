@@ -61,6 +61,20 @@ export type ResidentProfile = {
   isActive: boolean;
 };
 
+export type ResidentRentPeriod = {
+  month: string;
+  status: 'PAID' | 'PENDING' | 'OVERDUE' | 'UPCOMING';
+  label: string;
+};
+
+export type ResidentRentCycle = {
+  amount: number | string;
+  dueDate: string;
+  month: string;
+  canPayNow: boolean;
+  status: 'PENDING' | 'OVERDUE' | 'UPCOMING';
+};
+
 export type ResidentDashboardResponse = {
   profile: ResidentProfile | null;
   tenant: ResidentTenant | null;
@@ -70,5 +84,7 @@ export type ResidentDashboardResponse = {
   nextDueDate: string | number | null;
   monthlyRent?: number | string;
   rentStatus?: 'PAID' | 'PENDING' | 'OVERDUE';
+  currentRentPeriod: ResidentRentPeriod | null;
+  rentCycle: ResidentRentCycle | null;
 };
 

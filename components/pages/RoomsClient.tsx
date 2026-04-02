@@ -1,19 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   BedDouble,
   CheckCircle,
@@ -23,7 +14,8 @@ import {
   Search,
   Users,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ContactOptionsDialog } from '@/components/ContactOptionsDialog';
+import type { ContactDetailsData } from '@/lib/sanity/queries/contactDetails';
 import type { SanityRoomWithPG } from '@/lib/sanity/queries/roomSection';
 import {
   formatRoomAvailabilityLabel,
@@ -32,6 +24,7 @@ import {
 
 interface RoomsClientProps {
   initialRooms: SanityRoomWithPG[];
+  contactDetails?: ContactDetailsData | null;
 }
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
@@ -48,20 +41,30 @@ const STATUS_STYLE: Record<string, string> = {
   RESERVED: 'bg-white/90 text-blue-700',
 };
 
-export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
+export function RoomsClient({
+  initialRooms,
+  contactDetails,
+}: Readonly<RoomsClientProps>) {
   const [search, setSearch] = useState('');
   const [roomTypeFilter, setRoomTypeFilter] = useState<string>('all');
-  const [inquiryDialog, setInquiryDialog] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<SanityRoomWithPG | null>(
     null,
   );
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    message: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
+
+  const availableRoomTypes = useMemo<Array<keyof typeof ROOM_TYPE_LABELS>>(
+    () => Array.from(new Set(initialRooms.map((room) => room.roomType))),
+    [initialRooms],
+  );
+
+  useEffect(() => {
+    if (
+      roomTypeFilter !== 'all' &&
+      !availableRoomTypes.includes(roomTypeFilter)
+    ) {
+      setRoomTypeFilter('all');
+    }
+  }, [availableRoomTypes, roomTypeFilter]);
 
   const filteredRooms = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -100,50 +103,12 @@ export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
 
   const handleInquire = (room: SanityRoomWithPG) => {
     setSelectedRoom(room);
-    setInquiryDialog(true);
+    setContactDialogOpen(true);
   };
 
   const selectedRoomLabel = selectedRoom
     ? selectedRoom.title || `Room ${selectedRoom.roomNumber}`
     : '';
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!selectedRoom?.pgReference?.dbId) {
-      toast.error('This room is missing a PG reference.');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const response = await fetch('/api/inquiries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          pgId: selectedRoom.pgReference.dbId,
-          message: [form.message, `Room inquiry: ${selectedRoomLabel}`]
-            .filter(Boolean)
-            .join('\n\n'),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit');
-      }
-
-      toast.success("Inquiry submitted! We'll contact you soon.");
-      setInquiryDialog(false);
-      setSelectedRoom(null);
-      setForm({ name: '', phone: '', email: '', message: '' });
-    } catch {
-      toast.error('Failed to submit inquiry. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -169,7 +134,7 @@ export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
             />
           </div>
 
-          {['all', 'SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY'].map((type) => (
+          {['all', ...availableRoomTypes].map((type) => (
             <Button
               key={type}
               variant={roomTypeFilter === type ? 'default' : 'outline'}
@@ -350,92 +315,13 @@ export function RoomsClient({ initialRooms }: Readonly<RoomsClientProps>) {
         )}
       </div>
 
-      <Dialog open={inquiryDialog} onOpenChange={setInquiryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Inquire about {selectedRoomLabel}</DialogTitle>
-            <DialogDescription>
-              We&apos;ll reach out within 24 hours.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="mt-2 space-y-4">
-            <div>
-              <Label htmlFor="inq-name">Full Name *</Label>
-              <Input
-                id="inq-name"
-                required
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                placeholder="Your full name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-phone">Phone *</Label>
-              <Input
-                id="inq-phone"
-                type="tel"
-                required
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    phone: event.target.value,
-                  }))
-                }
-                placeholder="+91 98765 43210"
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-email">Email</Label>
-              <Input
-                id="inq-email"
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    email: event.target.value,
-                  }))
-                }
-                placeholder="optional"
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-msg">Message</Label>
-              <Textarea
-                id="inq-msg"
-                rows={3}
-                value={form.message}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    message: event.target.value,
-                  }))
-                }
-                placeholder="Any specific requirements?"
-              />
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setInquiryDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ContactOptionsDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        contactDetails={contactDetails}
+        title={`Contact for ${selectedRoomLabel || 'this room'}`}
+        description="Use WhatsApp or call the property owner directly from here."
+      />
     </div>
   );
 }

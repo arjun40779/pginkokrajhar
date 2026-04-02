@@ -22,39 +22,41 @@ import { Textarea } from '@/components/ui/textarea';
 import { useBookingValidation } from '@/lib/hooks/useAvailability';
 import { formatRoomAvailabilityLabel } from '@/lib/rooms/availability';
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: RazorpayOptions) => {
-      open: () => void;
-      on: (
-        event: 'payment.failed',
-        callback: (response: { error?: { description?: string } }) => void,
-      ) => void;
-    };
-  }
+interface RazorpaySuccessResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 }
 
-interface RazorpayOptions {
+interface RazorpayCheckoutOptions {
   key: string;
   amount: number;
   currency: string;
   name: string;
   description: string;
   order_id: string;
-  prefill: {
-    name: string;
-    contact: string;
+  prefill?: {
+    name?: string;
     email?: string;
+    contact?: string;
   };
   notes?: Record<string, string>;
-  theme?: { color: string };
-  modal?: { ondismiss?: () => void };
-  handler: (response: {
-    razorpay_order_id: string;
-    razorpay_payment_id: string;
-    razorpay_signature: string;
-  }) => void | Promise<void>;
+  theme?: {
+    color?: string;
+  };
+  modal?: {
+    ondismiss?: () => void;
+  };
+  handler: (response: RazorpaySuccessResponse) => void | Promise<void>;
 }
+
+type RazorpayInstance = {
+  open: () => void;
+};
+
+type RazorpayConstructor = new (
+  options: RazorpayCheckoutOptions,
+) => RazorpayInstance;
 
 interface PGRoom {
   id: string;
@@ -90,21 +92,6 @@ interface BookingPageClientProps {
   initialRoomId: string | null;
 }
 
-function loadRazorpayScript() {
-  if (globalThis.window?.Razorpay) {
-    return Promise.resolve(true);
-  }
-
-  return new Promise<boolean>((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
-
 export default function BookingPageClient({
   initialPgId,
   initialRoomId,
@@ -115,6 +102,7 @@ export default function BookingPageClient({
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [razorpayReady, setRazorpayReady] = useState(false);
   const [pg, setPG] = useState<PGDetails | null>(null);
   const [room, setRoom] = useState<PGRoom | null>(null);
   const [formData, setFormData] = useState({
@@ -129,6 +117,34 @@ export default function BookingPageClient({
     pgId,
     roomId,
   );
+
+  useEffect(() => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[data-razorpay-checkout="true"]',
+    );
+
+    if (existingScript) {
+      setRazorpayReady(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.dataset.razorpayCheckout = 'true';
+    script.onload = () => setRazorpayReady(true);
+    script.onerror = () => {
+      setRazorpayReady(false);
+      toast.error('Unable to load the payment gateway');
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      script.onload = null;
+      script.onerror = null;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -190,7 +206,7 @@ export default function BookingPageClient({
     ? formatRoomAvailabilityLabel(validation.availabilityStatus).toLowerCase()
     : null;
 
-  const handlePayment = async (event: React.FormEvent) => {
+  const handlePaymentCheckout = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!pgId) {
@@ -215,47 +231,60 @@ export default function BookingPageClient({
       return;
     }
 
+    if (!razorpayReady) {
+      toast.error('Payment gateway is still loading. Please try again.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const checkoutReady = await loadRazorpayScript();
-      if (!checkoutReady || !globalThis.window?.Razorpay) {
-        throw new Error('Unable to load Razorpay checkout');
-      }
-
       const orderResponse = await fetch('/api/payments/razorpay/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pgId, roomId: roomId || undefined }),
+        body: JSON.stringify({
+          pgId,
+          roomId: roomId || undefined,
+        }),
       });
 
       const orderPayload = await orderResponse.json();
       if (!orderResponse.ok) {
-        throw new Error(orderPayload.error || 'Failed to create payment order');
+        throw new Error(orderPayload.error || 'Failed to start payment');
       }
 
-      const razorpay = new globalThis.window.Razorpay({
+      const Razorpay = (
+        globalThis as typeof globalThis & { Razorpay?: RazorpayConstructor }
+      ).Razorpay;
+
+      if (!Razorpay) {
+        throw new Error('Payment gateway is unavailable right now');
+      }
+
+      const paymentModal = new Razorpay({
         key: orderPayload.keyId,
         amount: orderPayload.order.amount,
         currency: orderPayload.order.currency,
-        name: pg?.name ?? 'PG Booking',
-        description: room ? `Room ${room.roomNumber} booking` : 'PG booking',
+        name: pg.name,
+        description: room
+          ? `Room ${room.roomNumber} booking`
+          : 'PG booking payment',
         order_id: orderPayload.order.id,
         prefill: {
           name: formData.customerName,
-          contact: formData.customerPhone,
           email: formData.customerEmail || undefined,
+          contact: formData.customerPhone,
         },
         notes: {
           pgId,
           roomId: roomId || '',
           checkInDate: formData.checkInDate,
         },
-        theme: { color: '#2563eb' },
+        theme: {
+          color: '#111827',
+        },
         modal: {
-          ondismiss: () => {
-            setSubmitting(false);
-          },
+          ondismiss: () => setSubmitting(false),
         },
         handler: async (paymentResponse) => {
           try {
@@ -265,10 +294,13 @@ export default function BookingPageClient({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  ...formData,
+                  customerName: formData.customerName,
+                  customerPhone: formData.customerPhone,
+                  customerEmail: formData.customerEmail || '',
                   pgId,
                   roomId: roomId || undefined,
                   checkInDate: new Date(formData.checkInDate).toISOString(),
+                  notes: formData.notes,
                   razorpayOrderId: paymentResponse.razorpay_order_id,
                   razorpayPaymentId: paymentResponse.razorpay_payment_id,
                   razorpaySignature: paymentResponse.razorpay_signature,
@@ -276,38 +308,32 @@ export default function BookingPageClient({
               },
             );
 
-            const bookingPayload = await verifyResponse.json();
+            const verifyPayload = await verifyResponse.json();
             if (!verifyResponse.ok) {
               throw new Error(
-                bookingPayload.error || 'Payment verification failed',
+                verifyPayload.error || 'Payment verification failed',
               );
             }
 
-            toast.success('Payment received and booking confirmed');
-            router.push(`/booking-confirmation?bookingId=${bookingPayload.id}`);
+            toast.success('Payment successful. Booking confirmed.');
+            router.push(`/booking-confirmation?bookingId=${verifyPayload.id}`);
           } catch (error) {
-            console.error('Error verifying Razorpay payment:', error);
+            console.error('Error verifying payment:', error);
             toast.error(
               error instanceof Error
                 ? error.message
-                : 'Payment succeeded but booking confirmation failed',
+                : 'Payment verification failed',
             );
-          } finally {
             setSubmitting(false);
           }
         },
       });
 
-      razorpay.on('payment.failed', (response) => {
-        toast.error(response.error?.description || 'Payment failed');
-        setSubmitting(false);
-      });
-
-      razorpay.open();
+      paymentModal.open();
     } catch (error) {
-      console.error('Error starting Razorpay checkout:', error);
+      console.error('Error starting live checkout:', error);
       toast.error(
-        error instanceof Error ? error.message : 'Failed to start checkout',
+        error instanceof Error ? error.message : 'Failed to start payment',
       );
       setSubmitting(false);
     }
@@ -370,7 +396,7 @@ export default function BookingPageClient({
             Complete Checkout
           </h1>
           <p className="text-gray-600">
-            Pay securely to confirm your stay at {pg.name}
+            Complete your booking securely and pay the move-in amount online.
           </p>
         </div>
 
@@ -381,7 +407,7 @@ export default function BookingPageClient({
                 <CardTitle>Guest Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handlePayment} className="space-y-6">
+                <form onSubmit={handlePaymentCheckout} className="space-y-6">
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-900">
                       Personal Information
@@ -474,25 +500,28 @@ export default function BookingPageClient({
                     </div>
                   ) : null}
 
-                  <Button
-                    type="submit"
-                    disabled={
-                      submitting ||
-                      validationLoading ||
-                      !isRoomCheckoutAvailable
-                    }
-                    className="w-full"
-                    size="lg"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Starting secure checkout...
-                      </>
-                    ) : (
-                      `Pay ₹${totalAmount.toLocaleString()} & Confirm Booking`
-                    )}
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      type="submit"
+                      disabled={
+                        submitting ||
+                        validationLoading ||
+                        !isRoomCheckoutAvailable ||
+                        !razorpayReady
+                      }
+                      className="w-full"
+                      size="lg"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Starting secure payment...
+                        </>
+                      ) : (
+                        `Proceed to Payment`
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -553,9 +582,12 @@ export default function BookingPageClient({
                 <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
                   <div className="mb-2 flex items-center gap-2 font-medium">
                     <CheckCircle className="h-4 w-4" />
-                    Secure payment via Razorpay
+                    Secure online checkout
                   </div>
-                  <p>Your booking is confirmed immediately after payment.</p>
+                  <p>
+                    Your payment will open in Razorpay. The booking is confirmed
+                    only after the payment is verified successfully.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -565,7 +597,8 @@ export default function BookingPageClient({
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <IndianRupee className="h-4 w-4" />
-                  GST and platform fees are included in the amount shown.
+                  Today&apos;s payment includes the first month&apos;s rent and
+                  the security deposit.
                 </div>
               </CardContent>
             </Card>
@@ -575,3 +608,4 @@ export default function BookingPageClient({
     </div>
   );
 }
+

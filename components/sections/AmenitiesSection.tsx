@@ -1,4 +1,5 @@
 import { AmenitiesSection as AmenitiesSectionType } from '@/sanity/types';
+import { stegaClean } from '@sanity/client/stega';
 import {
   BookOpen,
   Car,
@@ -14,6 +15,10 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
+
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
+}
 
 const AmenitiesSection = ({
   sectionData,
@@ -50,10 +55,11 @@ const AmenitiesSection = ({
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {amenities.map((benefit, index) => {
-            const Icon = iconMap[benefit.icon];
+            const benefitIcon = cleanCmsString(benefit.icon);
+            const Icon = iconMap[benefitIcon] || Wifi;
             return (
               <div
-                key={benefit?.title || index}
+                key={cleanCmsString(benefit?.title) || String(index)}
                 className="bg-gray-50 p-6 rounded-lg hover:shadow-lg transition-shadow"
               >
                 <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">

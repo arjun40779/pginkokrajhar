@@ -43,6 +43,7 @@
     "react-dom": "18.3.1",
     "react-hook-form": "^7.55.0",
     "recharts": "^2.10.3",
+    "resend": "^6.10.0",
     "sanity": "^3.35.2",
     "sonner": "^1.7.4",
     "swr": "^2.4.1",

@@ -1,4 +1,4 @@
-import { client } from '@/sanity/lib/client';
+import { fetchSanityQuery, type SanityFetchOptions } from '@/sanity/lib/fetch';
 import { pageQuery, homePageQuery } from './pageSection';
 import type { PageSectionResponse } from '@/sanity/types';
 
@@ -20,10 +20,15 @@ function normalizePageSlug(slug: string): string {
 
 export async function getPageSection(
   slug: string,
+  options: SanityFetchOptions = {},
 ): Promise<PageSectionResponse | null> {
   try {
-    const page = await client.fetch(pageQuery, {
-      slug: slug,
+    const page = await fetchSanityQuery<PageSectionResponse | null>({
+      query: pageQuery,
+      params: {
+        slug,
+      },
+      stega: options.stega,
     });
     return page;
   } catch (error) {
@@ -32,10 +37,15 @@ export async function getPageSection(
   }
 }
 
-export async function getHomePageSection(): Promise<PageSectionResponse | null> {
+export async function getHomePageSection(
+  options: SanityFetchOptions = {},
+): Promise<PageSectionResponse | null> {
   try {
     // First try to fetch from pageSection documents
-    const page = await client.fetch(homePageQuery);
+    const page = await fetchSanityQuery<PageSectionResponse | null>({
+      query: homePageQuery,
+      stega: options.stega,
+    });
 
     if (page) {
       return page;
@@ -46,10 +56,22 @@ export async function getHomePageSection(): Promise<PageSectionResponse | null> 
 
     const [heroData, amenitiesData, facilitiesData, featuresCtaData] =
       await Promise.all([
-        client.fetch(heroSectionQuery),
-        client.fetch(amenitiesSectionQuery),
-        client.fetch(facilitiesSectionQuery),
-        client.fetch(featuresCtaSectionQuery),
+        fetchSanityQuery({
+          query: heroSectionQuery,
+          stega: options.stega,
+        }),
+        fetchSanityQuery({
+          query: amenitiesSectionQuery,
+          stega: options.stega,
+        }),
+        fetchSanityQuery({
+          query: facilitiesSectionQuery,
+          stega: options.stega,
+        }),
+        fetchSanityQuery({
+          query: featuresCtaSectionQuery,
+          stega: options.stega,
+        }),
       ]);
 
     // Convert individual sections to pageSection format

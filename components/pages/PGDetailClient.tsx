@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { stegaClean } from '@sanity/client/stega';
 import { useRouter } from 'next/navigation';
 import {
   MapPin,
@@ -21,17 +22,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { ContactOptionsDialog } from '@/components/ContactOptionsDialog';
+import type { ContactDetailsData } from '@/lib/sanity/queries/contactDetails';
 import type { SanityPG } from '@/lib/sanity/queries/pgSection';
 import {
   usePGAvailability,
@@ -45,6 +38,7 @@ import {
 interface Props {
   pg: SanityPG;
   dbId: string;
+  contactDetails?: ContactDetailsData | null;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -61,6 +55,10 @@ const ROOM_TYPE_LABEL: Record<string, string> = {
   DORMITORY: 'Dormitory',
 };
 
+function cleanCmsString(value?: string | null): string {
+  return typeof value === 'string' ? stegaClean(value) : '';
+}
+
 // Sub-component: validates price + availability before booking
 function BookNowButton({
   pgId,
@@ -68,8 +66,36 @@ function BookNowButton({
 }: Readonly<{ pgId: string; roomId: string }>) {
   const router = useRouter();
   const { validation, isLoading } = useBookingValidation(pgId, roomId);
+  const [checkingBeforeRedirect, setCheckingBeforeRedirect] = useState(false);
 
-  if (isLoading) {
+  const handleBookNow = async () => {
+    try {
+      setCheckingBeforeRedirect(true);
+
+      const response = await fetch(
+        `/api/booking/validate?pgId=${pgId}&roomId=${roomId}`,
+      );
+      const payload = await response.json();
+
+      if (!response.ok || !payload.valid) {
+        toast.error(
+          payload.reason ?? 'This room is not available for checkout',
+        );
+        return;
+      }
+
+      router.push(
+        `/booking?pgId=${pgId}&roomId=${roomId}&rent=${payload.monthlyRent}`,
+      );
+    } catch (error) {
+      console.error('Error validating room before redirecting:', error);
+      toast.error('Unable to verify room availability right now');
+    } finally {
+      setCheckingBeforeRedirect(false);
+    }
+  };
+
+  if (isLoading || checkingBeforeRedirect) {
     return (
       <Button disabled size="sm" className="w-full">
         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -87,38 +113,22 @@ function BookNowButton({
   }
 
   return (
-    <Button
-      size="sm"
-      className="w-full"
-      onClick={() =>
-        router.push(
-          `/booking?pgId=${pgId}&roomId=${roomId}&rent=${validation.monthlyRent}`,
-        )
-      }
-    >
+    <Button size="sm" className="w-full" onClick={handleBookNow}>
       Book ₹{validation.monthlyRent.toLocaleString()}/mo
     </Button>
   );
 }
 
-export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
+export function PGDetailClient({ pg, dbId, contactDetails }: Readonly<Props>) {
   const router = useRouter();
 
   // SWR: real-time room availability from backend
   const { availability, isLoading: availLoading } = usePGAvailability(dbId);
 
-  // Inquiry state
-  const [inquiryDialog, setInquiryDialog] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [selectedRoomNumber, setSelectedRoomNumber] = useState<string | null>(
     null,
   );
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    message: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
 
   // Merge Sanity room list with real-time availability from backend
   const rooms = pg.rooms ?? [];
@@ -133,32 +143,24 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
 
   const handleInquire = (roomNumber?: string) => {
     setSelectedRoomNumber(roomNumber ?? null);
-    setInquiryDialog(true);
+    setContactDialogOpen(true);
   };
 
-  const submitInquiry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const body: Record<string, string> = { ...form, pgId: dbId };
-      if (selectedRoomNumber) body.roomNote = `Room ${selectedRoomNumber}`;
-      const res = await fetch('/api/inquiries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Failed');
-      toast.success("Inquiry submitted! We'll contact you soon.");
-      setInquiryDialog(false);
-      setForm({ name: '', phone: '', email: '', message: '' });
-    } catch {
-      toast.error('Failed to submit inquiry. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const pgName = cleanCmsString(pg.name);
+  const pgAddress = cleanCmsString(pg.address);
+  const pgArea = cleanCmsString(pg.area);
+  const pgCity = cleanCmsString(pg.city);
+  const pgDescription = cleanCmsString(pg.description);
 
   const coverImg = pg.images?.[0];
+  const contactDialogTitle = selectedRoomNumber
+    ? `Contact ${pgName} - Room ${selectedRoomNumber}`
+    : `Contact ${pgName}`;
+  const dialogContactDetails = {
+    whatsappNumber: contactDetails?.whatsappNumber ?? null,
+    phoneNumber: contactDetails?.phoneNumber ?? pg.ownerPhone ?? null,
+    email: contactDetails?.email ?? pg.ownerEmail ?? null,
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -181,7 +183,7 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
         {coverImg ? (
           <img
             src={coverImg.asset.url}
-            alt={coverImg.alt ?? pg.name}
+            alt={cleanCmsString(coverImg.alt) || pgName}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -191,10 +193,10 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
         )}
         <div className="absolute inset-0 bg-black/30" />
         <div className="absolute bottom-6 left-6 text-white">
-          <h1 className="text-3xl font-bold mb-1">{pg.name}</h1>
+          <h1 className="text-3xl font-bold mb-1">{pgName}</h1>
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4" />
-            {pg.address}, {pg.area}, {pg.city}
+            {pgAddress}, {pgArea}, {pgCity}
           </div>
         </div>
         {pg.verificationStatus === 'VERIFIED' && (
@@ -218,7 +220,7 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                   <CardTitle>About</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{pg.description}</p>
+                  <p className="text-gray-600">{pgDescription}</p>
                 </CardContent>
               </Card>
             )}
@@ -233,7 +235,7 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                   <div className="grid grid-cols-2 gap-3">
                     {pg.amenities.map((a) => (
                       <div
-                        key={a.name}
+                        key={cleanCmsString(a.name)}
                         className="flex items-center gap-2 text-sm"
                       >
                         <div
@@ -252,7 +254,7 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
                               : 'text-gray-400 line-through'
                           }
                         >
-                          {a.name}
+                          {cleanCmsString(a.name)}
                         </span>
                       </div>
                     ))}
@@ -556,81 +558,13 @@ export function PGDetailClient({ pg, dbId }: Readonly<Props>) {
         </div>
       </div>
 
-      {/* Inquiry Dialog */}
-      <Dialog open={inquiryDialog} onOpenChange={setInquiryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Inquire about {pg.name}
-              {selectedRoomNumber ? ` — Room ${selectedRoomNumber}` : ''}
-            </DialogTitle>
-            <DialogDescription>
-              We&apos;ll reach out within 24 hours.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={submitInquiry} className="space-y-4 mt-2">
-            <div>
-              <Label htmlFor="inq-name">Full Name *</Label>
-              <Input
-                id="inq-name"
-                required
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-phone">Phone *</Label>
-              <Input
-                id="inq-phone"
-                type="tel"
-                required
-                value={form.phone}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, phone: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-email">Email</Label>
-              <Input
-                id="inq-email"
-                type="email"
-                value={form.email}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="inq-msg">Message</Label>
-              <Textarea
-                id="inq-msg"
-                rows={3}
-                value={form.message}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, message: e.target.value }))
-                }
-                placeholder="Any specific requirements?"
-              />
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setInquiryDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ContactOptionsDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        contactDetails={dialogContactDetails}
+        title={contactDialogTitle}
+        description="Choose WhatsApp or direct call to contact the property owner instantly."
+      />
     </div>
   );
 }
