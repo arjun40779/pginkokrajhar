@@ -1,0 +1,4 @@
+-- No-op migration.
+--
+-- The migration directory existed in history but the SQL file was missing,
+-- which blocked Prisma from applying later migrations.

@@ -26,9 +26,6 @@ interface PGFormData {
   startingPrice: number;
   securityDeposit: number;
   brokerageCharges: number;
-
-  // Meta
-  totalRooms: number;
   isActive: boolean;
 }
 
@@ -47,7 +44,6 @@ const initialFormData: PGFormData = {
   startingPrice: 0,
   securityDeposit: 0,
   brokerageCharges: 0,
-  totalRooms: 1,
   isActive: true,
 };
 
@@ -85,7 +81,6 @@ export default function EditPGPage({
           startingPrice: Number(pg.startingPrice) || 0,
           securityDeposit: Number(pg.securityDeposit) || 0,
           brokerageCharges: Number(pg.brokerageCharges) || 0,
-          totalRooms: pg.totalRooms || 1,
           isActive: pg.isActive ?? true,
         });
       } else {
@@ -148,8 +143,6 @@ export default function EditPGPage({
       newErrors.startingPrice = 'Starting price must be positive';
     if (formData.securityDeposit <= 0)
       newErrors.securityDeposit = 'Security deposit must be positive';
-    if (formData.totalRooms <= 0)
-      newErrors.totalRooms = 'Total rooms must be positive';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -240,6 +233,25 @@ export default function EditPGPage({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label
+              htmlFor="isActive"
+              className="text-sm font-medium text-gray-700"
+            >
+              Active PG
+            </label>
+          </div>
+        </div>
+
         {/* Basic Information */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -581,55 +593,6 @@ export default function EditPGPage({
                 placeholder="0"
                 min="0"
               />
-            </div>
-          </div>
-        </div>
-
-        {/* Meta Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Meta Information
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="totalRooms"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Total Rooms <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="totalRooms"
-                type="number"
-                name="totalRooms"
-                value={formData.totalRooms}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.totalRooms ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="10"
-                min="1"
-              />
-              {errors.totalRooms && (
-                <p className="text-red-500 text-xs mt-1">{errors.totalRooms}</p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isActive"
-                name="isActive"
-                checked={formData.isActive}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="isActive"
-                className="text-sm font-medium text-gray-700"
-              >
-                Active PG
-              </label>
             </div>
           </div>
         </div>

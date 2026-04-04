@@ -68,7 +68,7 @@ export function Hero({ heroData }: Readonly<HeroProps>) {
                 })
               ) : (
                 <>
-                  <Link href="/rooms">
+                  <Link href="/pgs">
                     <Button
                       size="lg"
                       className="bg-white text-blue-600 hover:bg-gray-100"

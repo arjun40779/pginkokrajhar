@@ -18,7 +18,7 @@ import { structure } from './sanity/structure';
 
 const homeLocation = { title: 'Homepage', href: '/' };
 const contactLocation = { title: 'Contact page', href: '/contact' };
-const roomsLocation = { title: 'Rooms page', href: '/rooms' };
+const roomsLocation = { title: 'PG listing page', href: '/pgs' };
 
 export default defineConfig({
   basePath: '/studio',
@@ -67,17 +67,27 @@ export default defineConfig({
               dbId: 'dbId',
               slug: 'slug.current',
             },
-            resolve: (document) => ({
-              locations: [
-                {
-                  title: document?.title || 'PG details',
-                  href: document?.dbId
-                    ? `/pg/${document.dbId}`
-                    : resolvePageHref(document?.slug || '/rooms'),
-                },
-                roomsLocation,
-              ],
-            }),
+            resolve: (document) => {
+              let previewHref = resolvePageHref('/pgs');
+
+              if (document?.dbId) {
+                previewHref = `/pg/${document.dbId}`;
+              }
+
+              if (document?.slug) {
+                previewHref = `/pgs/${document.slug}/rooms`;
+              }
+
+              return {
+                locations: [
+                  {
+                    title: document?.title || 'PG details',
+                    href: previewHref,
+                  },
+                  roomsLocation,
+                ],
+              };
+            },
           }),
           room: defineLocations({
             select: {

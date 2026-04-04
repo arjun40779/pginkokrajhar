@@ -25,6 +25,8 @@ import {
 interface RoomsClientProps {
   initialRooms: SanityRoomWithPG[];
   contactDetails?: ContactDetailsData | null;
+  title?: string;
+  description?: string;
 }
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
@@ -44,6 +46,8 @@ const STATUS_STYLE: Record<string, string> = {
 export function RoomsClient({
   initialRooms,
   contactDetails,
+  title = 'Our Rooms & Accommodation',
+  description = 'Browse all available rooms across our PG properties and find the setup that fits your budget and sharing preference.',
 }: Readonly<RoomsClientProps>) {
   const [search, setSearch] = useState('');
   const [roomTypeFilter, setRoomTypeFilter] = useState<string>('all');
@@ -114,12 +118,9 @@ export function RoomsClient({
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-gray-900">
-            Our Rooms & Accommodation
-          </h1>
+          <h1 className="mb-4 text-4xl font-bold text-gray-900">{title}</h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-600">
-            Browse all available rooms across our PG properties and find the
-            setup that fits your budget and sharing preference.
+            {description}
           </p>
         </div>
 

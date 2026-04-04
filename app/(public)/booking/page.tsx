@@ -47,7 +47,7 @@ export default async function BookingPage({
         room.maxOccupancy,
       )
     ) {
-      redirect('/rooms');
+      redirect('/pgs');
     }
 
     return <BookingPageClient initialPgId={room.pgId} initialRoomId={roomId} />;

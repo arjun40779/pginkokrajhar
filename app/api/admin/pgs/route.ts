@@ -55,6 +55,11 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
+          rooms: {
+            select: {
+              availabilityStatus: true,
+            },
+          },
           _count: {
             select: {
               rooms: true,
@@ -66,8 +71,21 @@ export async function GET(request: NextRequest) {
       prisma.pG.count({ where }),
     ]);
 
+    const normalizedPGs = pgs.map((pg) => {
+      const totalRooms = pg.rooms.length;
+      const availableRooms = pg.rooms.filter(
+        (room) => room.availabilityStatus === 'AVAILABLE',
+      ).length;
+
+      return {
+        ...pg,
+        totalRooms,
+        availableRooms,
+      };
+    });
+
     return NextResponse.json({
-      pgs,
+      pgs: normalizedPGs,
       pagination: {
         page,
         limit,
@@ -107,7 +125,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const defaultTotalRooms = 1;
+    const defaultTotalRooms = 0;
 
     const pg = await prisma.pG.create({
       data: {

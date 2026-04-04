@@ -314,7 +314,9 @@ export default function PGDetailsPage({
   }
 
   const occupancyRate =
-    ((pg.totalRooms - pg.availableRooms) / pg.totalRooms) * 100;
+    pg.totalRooms > 0
+      ? ((pg.totalRooms - pg.availableRooms) / pg.totalRooms) * 100
+      : 0;
 
   return (
     <div className="px-6">

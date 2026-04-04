@@ -150,7 +150,7 @@ export default function BookingPageClient({
     const fetchData = async () => {
       if (!pgId) {
         toast.error('PG ID is required');
-        router.push('/rooms');
+        router.push('/pgs');
         return;
       }
 
@@ -185,7 +185,7 @@ export default function BookingPageClient({
             ? error.message
             : 'Failed to load booking details',
         );
-        router.push('/rooms');
+        router.push('/pgs');
       } finally {
         setLoading(false);
       }
@@ -265,7 +265,7 @@ export default function BookingPageClient({
         key: orderPayload.keyId,
         amount: orderPayload.order.amount,
         currency: orderPayload.order.currency,
-        name: pg.name,
+        name: pg?.name ?? 'PG Booking',
         description: room
           ? `Room ${room.roomNumber} booking`
           : 'PG booking payment',
@@ -344,10 +344,10 @@ export default function BookingPageClient({
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="mb-4 text-gray-600">Invalid booking request</p>
-          <Link href="/rooms">
+          <Link href="/pgs">
             <Button>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Rooms
+              Back to PGs
             </Button>
           </Link>
         </div>
@@ -371,10 +371,10 @@ export default function BookingPageClient({
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="mb-4 text-red-600">Failed to load PG details</p>
-          <Link href="/rooms">
+          <Link href="/pgs">
             <Button>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Rooms
+              Back to PGs
             </Button>
           </Link>
         </div>

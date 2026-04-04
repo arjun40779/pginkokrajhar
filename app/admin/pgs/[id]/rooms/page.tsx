@@ -299,13 +299,16 @@ export default function PGRoomsPage({ params }: Readonly<PGRoomsPageProps>) {
       });
 
       if (response.ok) {
-        setRooms(rooms.filter((room) => room.id !== roomId));
-        // Update PG totals
+        const nextRooms = rooms.filter((room) => room.id !== roomId);
+        setRooms(nextRooms);
+
         if (pg) {
           setPg({
             ...pg,
-            totalRooms: pg.totalRooms - 1,
-            availableRooms: Math.max(0, pg.availableRooms - 1),
+            totalRooms: nextRooms.length,
+            availableRooms: nextRooms.filter(
+              (room) => room.availabilityStatus === 'AVAILABLE',
+            ).length,
           });
         }
       } else {

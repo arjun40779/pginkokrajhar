@@ -126,8 +126,8 @@ export default function BookingConfirmationPageClient({
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="mb-4 text-red-600">{error || 'Booking not found'}</p>
-          <Link href="/rooms">
-            <Button>Back to Rooms</Button>
+          <Link href="/pgs">
+            <Button>Back to PGs</Button>
           </Link>
         </div>
       </div>
@@ -416,7 +416,7 @@ export default function BookingConfirmationPageClient({
                     View Property
                   </Button>
                 </Link>
-                <Link href="/rooms" className="block">
+                <Link href="/pgs" className="block">
                   <Button variant="outline" className="w-full" size="sm">
                     Browse More PGs
                   </Button>
