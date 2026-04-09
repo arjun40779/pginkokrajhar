@@ -45,6 +45,18 @@ export async function POST() {
         phone: true,
         moveInDate: true,
         rentAmount: true,
+        room: {
+          select: {
+            pg: {
+              select: {
+                id: true,
+                razorpayKeyId: true,
+                razorpayKeySecret: true,
+                razorpayAccountId: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -114,7 +126,16 @@ export async function POST() {
       );
     }
 
-    const razorpay = getRazorpayClient();
+    const pgConfig = tenant.room?.pg;
+    const razorpayConfig =
+      pgConfig?.razorpayKeyId && pgConfig.razorpayKeySecret
+        ? {
+            keyId: pgConfig.razorpayKeyId,
+            keySecret: pgConfig.razorpayKeySecret,
+          }
+        : undefined;
+
+    const razorpay = getRazorpayClient(razorpayConfig);
     const order = await razorpay.orders.create({
       amount: Math.round(Number(paymentRecord.amount) * 100),
       currency: 'INR',
@@ -124,11 +145,13 @@ export async function POST() {
         tenantId: tenant.id,
         month: paymentRecord.month,
         flow: 'resident-rent',
+        pgId: pgConfig?.id ?? null,
+        razorpayAccountId: pgConfig?.razorpayAccountId ?? null,
       },
     });
 
     return NextResponse.json({
-      keyId: getRazorpayKeyId(),
+      keyId: getRazorpayKeyId(razorpayConfig),
       order: {
         id: order.id,
         amount: order.amount,

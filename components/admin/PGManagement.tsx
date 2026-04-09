@@ -1,7 +1,18 @@
+'use client';
+
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, MapPin, Phone, Mail } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  MapPin,
+  Phone,
+  Mail,
+  Building2,
+} from 'lucide-react';
 import { Button } from '../ui/button';
+import { useAdminPGs } from '@/lib/hooks/useApi';
 
 interface PG {
   id: string;
@@ -15,65 +26,44 @@ interface PG {
   monthlyRent: number;
 }
 
+interface AdminPGResponse {
+  pgs?: Array<{
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    ownerPhone: string;
+    ownerEmail: string | null;
+    totalRooms: number;
+    availableRooms: number;
+    startingPrice: number | string;
+  }>;
+}
+
+function mapPGs(data?: AdminPGResponse): PG[] {
+  return (data?.pgs || []).map((pg) => ({
+    id: pg.id,
+    name: pg.name,
+    address: pg.address,
+    city: pg.city,
+    phone: pg.ownerPhone,
+    email: pg.ownerEmail,
+    totalRooms: pg.totalRooms,
+    occupiedRooms: Math.max(0, pg.totalRooms - pg.availableRooms),
+    monthlyRent: Number(pg.startingPrice),
+  }));
+}
+
 export function PGManagement() {
-  const [pgs, setPGs] = useState<PG[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void fetchPGs();
-  }, []);
-
-  const fetchPGs = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/admin/pgs');
-      const data = (await response.json().catch(() => null)) as {
-        pgs?: Array<{
-          id: string;
-          name: string;
-          address: string;
-          city: string;
-          ownerPhone: string;
-          ownerEmail: string | null;
-          totalRooms: number;
-          availableRooms: number;
-          startingPrice: number | string;
-        }>;
-        error?: string;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Failed to fetch PGs');
-      }
-
-      setPGs(
-        (data?.pgs || []).map((pg) => ({
-          id: pg.id,
-          name: pg.name,
-          address: pg.address,
-          city: pg.city,
-          phone: pg.ownerPhone,
-          email: pg.ownerEmail,
-          totalRooms: pg.totalRooms,
-          occupiedRooms: Math.max(0, pg.totalRooms - pg.availableRooms),
-          monthlyRent: Number(pg.startingPrice),
-        })),
-      );
-    } catch (fetchError) {
-      console.error('Failed to fetch PGs:', fetchError);
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : 'Failed to fetch PGs',
-      );
-      setPGs([]);
-    } finally {
-      setLoading(false);
-    }
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { data, error, isLoading, mutate } = useAdminPGs(1, 100) as {
+    data?: AdminPGResponse;
+    error?: Error;
+    isLoading: boolean;
+    mutate: () => Promise<AdminPGResponse | undefined>;
   };
+
+  const pgs = useMemo(() => mapPGs(data), [data]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this PG?')) {
@@ -81,6 +71,7 @@ export function PGManagement() {
     }
 
     try {
+      setDeletingId(id);
       const response = await fetch(`/api/admin/pgs/${id}`, {
         method: 'DELETE',
       });
@@ -93,7 +84,7 @@ export function PGManagement() {
         throw new Error(data?.error || 'Failed to delete PG');
       }
 
-      setPGs((current) => current.filter((pg) => pg.id !== id));
+      await mutate();
     } catch (deleteError) {
       console.error('Failed to delete PG:', deleteError);
       alert(
@@ -101,6 +92,8 @@ export function PGManagement() {
           ? deleteError.message
           : 'Failed to delete PG',
       );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -123,80 +116,118 @@ export function PGManagement() {
         </Button>
       </div>
 
-      {loading && (
+      {isLoading && (
         <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
           Loading PGs...
         </div>
       )}
 
-      {!loading && error && (
+      {!isLoading && error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+          {error.message}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {pgs.map((pg) => (
-          <div
-            key={pg.id}
-            className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">{pg.name}</h3>
-              <div className="flex gap-2">
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="hidden border-b border-gray-200 bg-gray-50 px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 lg:grid lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1.6fr)_120px_120px_140px_100px] lg:gap-4">
+          <span>Property</span>
+          <span>Contact</span>
+          <span>Total Rooms</span>
+          <span>Occupied</span>
+          <span>Monthly Rent</span>
+          <span>Actions</span>
+        </div>
+
+        {!isLoading && !error && pgs.length === 0 && (
+          <div className="px-6 py-12 text-center text-sm text-gray-500">
+            No PGs found.
+          </div>
+        )}
+
+        <div className="divide-y divide-gray-200">
+          {pgs.map((pg) => (
+            <div
+              key={pg.id}
+              className="px-6 py-5 transition-colors hover:bg-gray-50 lg:grid lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1.6fr)_120px_120px_140px_100px] lg:items-center lg:gap-4"
+            >
+              <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-lg bg-blue-50 p-2 text-blue-600">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <h3 className="truncate text-base font-semibold text-gray-900 lg:text-lg">
+                      {pg.name}
+                    </h3>
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                      <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <div>
+                        <p>{pg.address}</p>
+                        <p>{pg.city}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 lg:mt-0">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Phone className="h-4 w-4 flex-shrink-0" />
+                  <span>{pg.phone}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">
+                    {pg.email || 'No email available'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 lg:mt-0">
+                <p className="text-xs uppercase tracking-wide text-gray-500 lg:hidden">
+                  Total Rooms
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {pg.totalRooms}
+                </p>
+              </div>
+
+              <div className="mt-4 lg:mt-0">
+                <p className="text-xs uppercase tracking-wide text-gray-500 lg:hidden">
+                  Occupied
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {pg.occupiedRooms}
+                </p>
+              </div>
+
+              <div className="mt-4 lg:mt-0">
+                <p className="text-xs uppercase tracking-wide text-gray-500 lg:hidden">
+                  Monthly Rent
+                </p>
+                <p className="text-lg font-semibold text-green-600">
+                  ₹{pg.monthlyRent.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2 lg:mt-0 lg:justify-end">
                 <Link
                   href={`/admin/pgs/${pg.id}/edit`}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="h-4 w-4" />
                 </Link>
                 <button
                   onClick={() => handleDelete(pg.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  disabled={deletingId === pg.id}
+                  className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
-
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 text-gray-600">
-                <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-sm">{pg.address}</p>
-                  <p className="text-sm">{pg.city}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="w-4 h-4 flex-shrink-0" />
-                <p className="text-sm">{pg.phone}</p>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Mail className="w-4 h-4 flex-shrink-0" />
-                <p className="text-sm">{pg.email || 'No email available'}</p>
-              </div>
-
-              <div className="pt-3 border-t border-gray-200">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Total Rooms</p>
-                    <p className="text-lg font-semibold">{pg.totalRooms}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Occupied</p>
-                    <p className="text-lg font-semibold">{pg.occupiedRooms}</p>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-xs text-gray-500">Monthly Rent</p>
-                  <p className="text-lg font-semibold text-green-600">
-                    ₹{pg.monthlyRent.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

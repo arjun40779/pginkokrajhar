@@ -103,7 +103,7 @@ export const fallbackCtaCards: CtaCard[] = [
     description:
       'Browse our available rooms and book your perfect accommodation today. We offer flexible payment plans and instant confirmation.',
     buttonText: 'Explore Rooms & Pricing',
-    buttonUrl: '/rooms',
+    buttonUrl: '/pgs',
     buttonIcon: 'ArrowRight',
     backgroundColor: 'blue',
     footerText: 'Have questions?',

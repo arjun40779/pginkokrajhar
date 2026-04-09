@@ -36,58 +36,39 @@ export function Hero({ heroData }: Readonly<HeroProps>) {
                 'Comfortable, secure, and affordable PG accommodation for students and working professionals in the heart of the city.'}
             </p>
             <div className="flex flex-wrap gap-4">
-              {heroData?.ctaButtons?.length ? (
-                heroData.ctaButtons.map((button) => {
-                  const buttonHref = cleanCmsString(
-                    'url' in button
-                      ? button.url
-                      : (button as { link?: string }).link,
-                  );
-                  const buttonStyle = cleanCmsString(button.style);
-                  const buttonText = cleanCmsString(button.text);
+              {heroData?.ctaButtons?.length
+                ? heroData.ctaButtons.map((button) => {
+                    const buttonHref = cleanCmsString(
+                      'url' in button
+                        ? button.url
+                        : (button as { link?: string }).link,
+                    );
+                    const buttonStyle = cleanCmsString(button.style);
+                    const buttonText = cleanCmsString(button.text);
 
-                  return (
-                    <Link
-                      key={`${buttonText}-${buttonHref}`}
-                      href={buttonHref || '/contact'}
-                    >
-                      <Button
-                        size="lg"
-                        className={cn(
-                          'text-blue-600 hover:bg-gray-100',
-                          buttonStyle === 'primary'
-                            ? 'bg-white'
-                            : 'border-white text-white hover:bg-white hover:text-blue-600',
-                        )}
+                    return (
+                      <Link
+                        key={`${buttonText}-${buttonHref}`}
+                        href={buttonHref || '/contact'}
                       >
-                        {buttonText}
-                        {button.icon && <ArrowRight className="ml-2 h-4 w-4" />}
-                      </Button>
-                    </Link>
-                  );
-                })
-              ) : (
-                <>
-                  <Link href="/rooms">
-                    <Button
-                      size="lg"
-                      className="bg-white text-blue-600 hover:bg-gray-100"
-                    >
-                      View Rooms
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/contact">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="border-white text-white hover:bg-white hover:text-blue-600"
-                    >
-                      Contact Us
-                    </Button>
-                  </Link>
-                </>
-              )}
+                        <Button
+                          size="lg"
+                          className={cn(
+                            'text-blue-600 hover:bg-gray-100',
+                            buttonStyle === 'primary'
+                              ? 'bg-white'
+                              : 'border-white text-white hover:bg-white hover:text-blue-600',
+                          )}
+                        >
+                          {buttonText}
+                          {button.icon && (
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          )}
+                        </Button>
+                      </Link>
+                    );
+                  })
+                : null}
             </div>
             <div className="mt-12 grid grid-cols-3 gap-6">
               {heroData?.stats?.map((stat) => (
@@ -114,13 +95,7 @@ export function Hero({ heroData }: Readonly<HeroProps>) {
                   600
                 }
               />
-            ) : (
-              <img
-                src="https://images.unsplash.com/photo-1721743169043-dda0212ce3d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBzaW5nbGUlMjBiZWRyb29tJTIwYWNjb21tb2RhdGlvbnxlbnwxfHx8fDE3NzM3NTQ4OTV8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Modern PG Room"
-                className="rounded-lg shadow-2xl"
-              />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

@@ -29,9 +29,10 @@ export const roomListQuery = `
     monthlyRent,
     securityDeposit,
     maintenanceCharges,
-    featured,amenities,
+    featured,
+    amenities,
     availabilityStatus,
-    heroImage {
+    "heroImage": coalesce(heroImage, images[0]) {
       asset-> {
         _id,
         url
@@ -56,7 +57,40 @@ export const roomsPageQuery = `
       featured,
       amenities,
       availabilityStatus,
-      heroImage {
+      "heroImage": coalesce(heroImage, images[0]) {
+        asset-> {
+          _id,
+          url
+        }
+      }
+    },
+    "pricingIncludesSection": *[_type == "roomPricingIncludesSection" && isActive == true] | order(_updatedAt desc)[0] {
+      _id,
+      title,
+      roomAmenities,
+      commonFacilities
+    }
+  }
+`;
+
+export const roomsPageByPGQuery = `
+  {
+    "rooms": *[_type == "room" && pgId == $pgDbId && isActive == true] | order(roomNumber asc) {
+      _id,
+      dbId,
+      title,
+      slug,
+      description,
+      roomType,
+      maxOccupancy,
+      currentOccupancy,
+      monthlyRent,
+      securityDeposit,
+      maintenanceCharges,
+      featured,
+      "amenities": coalesce(amenities, features[available == true].name),
+      availabilityStatus,
+      "heroImage": coalesce(heroImage, images[0]) {
         asset-> {
           _id,
           url
@@ -437,6 +471,27 @@ export async function getRoomsPageData(): Promise<RoomsPageData> {
     };
   } catch (error) {
     console.error('Error fetching rooms page data from Sanity:', error);
+    return {
+      rooms: [],
+      pricingIncludesSection: null,
+    };
+  }
+}
+
+export async function getRoomsPageDataByPG(
+  pgDbId: string,
+): Promise<RoomsPageData> {
+  try {
+    const data = await fetchSanityQuery<RoomsPageData>({
+      query: roomsPageByPGQuery,
+      params: { pgDbId },
+    });
+    return {
+      rooms: data?.rooms || [],
+      pricingIncludesSection: data?.pricingIncludesSection || null,
+    };
+  } catch (error) {
+    console.error(`Error fetching rooms page data for PG ${pgDbId}:`, error);
     return {
       rooms: [],
       pricingIncludesSection: null,

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { ContactMethods } from '@/lib/sanity/queries/contactDetails';
+import { getPGRoomsPath } from '@/lib/pgs/publicPath';
 import { Button } from '@/components/ui/button';
 import { ContactOptionsDialog } from '@/components/ContactOptionsDialog';
 
@@ -52,6 +53,17 @@ export function RoomDetailActionButtons({
         >
           Inquire
         </Button>
+
+        {pgSlug ? (
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="min-w-[160px] border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+          >
+            <Link href={getPGRoomsPath(pgSlug)}>View PG</Link>
+          </Button>
+        ) : null}
       </div>
 
       <ContactOptionsDialog

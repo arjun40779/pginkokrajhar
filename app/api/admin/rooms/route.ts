@@ -211,7 +211,10 @@ export async function POST(request: NextRequest) {
     // Update PG available rooms count
     await prisma.pG.update({
       where: { id: validatedData.pgId },
-      data: { availableRooms: { increment: 1 } },
+      data: {
+        totalRooms: { increment: 1 },
+        availableRooms: { increment: 1 },
+      },
     });
 
     // Sync to Sanity (non-blocking)

@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
         isActive: true,
         startingPrice: true,
         securityDeposit: true,
+        razorpayKeyId: true,
+        razorpayKeySecret: true,
+        razorpayAccountId: true,
       },
     });
 
@@ -85,7 +88,15 @@ export async function POST(request: NextRequest) {
     const securityDeposit = Number(room?.securityDeposit ?? pg.securityDeposit);
     const totalAmount = monthlyRent + securityDeposit;
 
-    const razorpay = getRazorpayClient();
+    const razorpayConfig =
+      pg.razorpayKeyId && pg.razorpayKeySecret
+        ? {
+            keyId: pg.razorpayKeyId,
+            keySecret: pg.razorpayKeySecret,
+          }
+        : undefined;
+
+    const razorpay = getRazorpayClient(razorpayConfig);
     const order = await razorpay.orders.create({
       amount: Math.round(totalAmount * 100),
       currency: 'INR',
@@ -95,11 +106,12 @@ export async function POST(request: NextRequest) {
         roomId: room?.id ?? '',
         pgName: pg.name,
         roomNumber: room?.roomNumber ?? '',
+        razorpayAccountId: pg.razorpayAccountId ?? '',
       },
     });
 
     return NextResponse.json({
-      keyId: getRazorpayKeyId(),
+      keyId: getRazorpayKeyId(razorpayConfig),
       order: {
         id: order.id,
         amount: order.amount,

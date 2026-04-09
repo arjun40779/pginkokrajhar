@@ -4,42 +4,139 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/prisma';
+async function resolveCanonicalUser(
+  authUser: {
+    id: string;
+    email?: string | null;
+    user_metadata?: Record<string, any> | null;
+  },
+  authEmail: string | null,
+  authMobile: string | null,
+) {
+  const metadata = authUser.user_metadata ?? {};
 
-async function getOrCreateUserProfile(authUser: {
+  const candidates = await prisma.user.findMany({
+    where: {
+      OR: [
+        { id: authUser.id },
+        ...(authEmail ? [{ email: authEmail }] : []),
+        ...(authMobile ? [{ mobile: authMobile }] : []),
+      ],
+    },
+  });
+
+  let canonicalUser =
+    candidates.find((candidate) => candidate.id === authUser.id) ?? null;
+
+  if (canonicalUser === null) {
+    const name =
+      (metadata.full_name as string | undefined) ||
+      (metadata.name as string | undefined) ||
+      authEmail ||
+      null;
+
+    canonicalUser = await prisma.user.create({
+      data: {
+        id: authUser.id,
+        name,
+        mobile: authMobile ?? '',
+        email: authEmail,
+        role: 'TENANT',
+        isActive: true,
+      },
+    });
+
+    return { canonicalUser, guestUsers: candidates };
+  }
+
+  const updatedName =
+    (metadata.full_name as string | undefined) ||
+    (metadata.name as string | undefined) ||
+    canonicalUser.name;
+
+  const updatedMobile = authMobile ?? canonicalUser.mobile;
+  const updatedEmail = authEmail ?? canonicalUser.email;
+
+  if (
+    updatedName !== canonicalUser.name ||
+    updatedMobile !== canonicalUser.mobile ||
+    updatedEmail !== canonicalUser.email ||
+    !canonicalUser.isActive
+  ) {
+    canonicalUser = await prisma.user.update({
+      where: { id: canonicalUser.id },
+      data: {
+        name: updatedName,
+        mobile: updatedMobile,
+        email: updatedEmail,
+        isActive: true,
+      },
+    });
+  }
+
+  const guestUsers = candidates.filter(
+    (candidate) => candidate.id !== authUser.id,
+  );
+  return { canonicalUser, guestUsers };
+}
+
+async function mergeGuestUsersIntoCanonical(
+  canonicalUserId: string,
+  guestUsers: Array<{ id: string; isActive: boolean }>,
+) {
+  if (guestUsers.length === 0) {
+    return;
+  }
+
+  const canonicalTenant = await prisma.tenant.findFirst({
+    where: { userId: canonicalUserId },
+  });
+
+  for (const guest of guestUsers) {
+    const guestTenants = await prisma.tenant.findMany({
+      where: { userId: guest.id },
+    });
+
+    if (guestTenants.length > 0 && !canonicalTenant) {
+      await prisma.tenant.updateMany({
+        where: { userId: guest.id },
+        data: { userId: canonicalUserId },
+      });
+    }
+
+    if (guest.isActive) {
+      await prisma.user.update({
+        where: { id: guest.id },
+        data: { isActive: false },
+      });
+    }
+  }
+}
+
+async function getOrCreateMergedUserProfile(authUser: {
   id: string;
   email?: string | null;
   user_metadata?: Record<string, any> | null;
 }) {
-  const user = await prisma.user.findUnique({
-    where: {
-      id: authUser.id,
-    },
-  });
-
-  if (user) {
-    return user;
-  }
-
   const metadata = authUser.user_metadata ?? {};
-  const name =
-    (metadata.full_name as string | undefined) ||
-    (metadata.name as string | undefined) ||
-    authUser.email ||
-    null;
-  const mobile =
+  const authEmail = authUser.email ?? null;
+  const authMobile =
     (metadata.mobile as string | undefined) ||
     (metadata.phone as string | undefined) ||
-    '';
+    null;
 
-  return prisma.user.create({
-    data: {
-      id: authUser.id,
-      name,
-      mobile,
-      email: authUser.email,
-      role: 'TENANT',
-    },
-  });
+  const { canonicalUser, guestUsers } = await resolveCanonicalUser(
+    authUser,
+    authEmail,
+    authMobile,
+  );
+
+  await mergeGuestUsersIntoCanonical(
+    canonicalUser.id,
+    guestUsers.map((guest) => ({ id: guest.id, isActive: guest.isActive })),
+  );
+
+  return canonicalUser;
 }
 
 export async function GET(request: NextRequest) {
@@ -66,11 +163,11 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(
-      'Profile API: Attempting database query for user:',
+      'Profile API: Attempting database query and merge for user:',
       authUser.id,
     );
 
-    const user = await getOrCreateUserProfile(authUser);
+    const user = await getOrCreateMergedUserProfile(authUser);
 
     console.log('Profile API: Database query result:', {
       hasUser: !!user,

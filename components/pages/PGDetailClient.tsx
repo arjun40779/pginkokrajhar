@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { stegaClean } from '@sanity/client/stega';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   MapPin,
@@ -120,8 +121,6 @@ function BookNowButton({
 }
 
 export function PGDetailClient({ pg, dbId, contactDetails }: Readonly<Props>) {
-  const router = useRouter();
-
   // SWR: real-time room availability from backend
   const { availability, isLoading: availLoading } = usePGAvailability(dbId);
 
@@ -167,14 +166,13 @@ export function PGDetailClient({ pg, dbId, contactDetails }: Readonly<Props>) {
       {/* Back nav */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
+          <Link
+            href="/pgs"
             className="flex items-center text-sm text-gray-600 hover:text-gray-900"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to listings
-          </button>
+            Back to all PGs
+          </Link>
         </div>
       </div>
 

@@ -23,7 +23,7 @@ export const sampleHeroData = {
   ctaButtons: [
     {
       text: 'View Rooms',
-      url: '/rooms',
+      url: '/pgs',
       style: 'primary',
       icon: 'arrow-right',
     },
@@ -79,3 +79,4 @@ export const sampleHeroData = {
  * - Responsive design
  * - SEO-optimized images with Next.js Image component
  */
+

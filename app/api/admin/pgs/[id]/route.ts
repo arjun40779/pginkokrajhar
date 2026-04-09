@@ -35,13 +35,10 @@ const pgUpdateSchema = z.object({
     .min(0, 'Security deposit cannot be negative')
     .optional(),
   brokerageCharges: z.number().optional(),
-
-  totalRooms: z
-    .number()
-    .int()
-    .positive('Total rooms must be positive')
-    .optional(),
   isActive: z.boolean().optional(),
+  razorpayKeyId: z.string().optional(),
+  razorpayKeySecret: z.string().optional(),
+  razorpayAccountId: z.string().optional(),
 });
 
 // GET /api/admin/pgs/[id] - Get PG details
@@ -94,7 +91,16 @@ export async function GET(
       return NextResponse.json({ error: 'PG not found' }, { status: 404 });
     }
 
-    return NextResponse.json(pg);
+    const totalRooms = pg.rooms.length;
+    const availableRooms = pg.rooms.filter(
+      (room) => room.availabilityStatus === 'AVAILABLE',
+    ).length;
+
+    return NextResponse.json({
+      ...pg,
+      totalRooms,
+      availableRooms,
+    });
   } catch (error) {
     console.error('Error fetching PG:', error);
     return NextResponse.json({ error: 'Failed to fetch PG' }, { status: 500 });
@@ -119,22 +125,14 @@ export async function PUT(
       return NextResponse.json({ error: 'PG not found' }, { status: 404 });
     }
 
-    // Update available rooms if total rooms changed
-    let availableRoomsUpdate = {};
-    if (
-      validatedData.totalRooms &&
-      validatedData.totalRooms !== existingPG.totalRooms
-    ) {
-      const occupiedRooms = existingPG.totalRooms - existingPG.availableRooms;
-      availableRoomsUpdate = {
-        availableRooms: Math.max(0, validatedData.totalRooms - occupiedRooms),
-      };
-    }
-
     const updateData: any = {
       ...validatedData,
-      ...availableRoomsUpdate,
       ownerEmail: validatedData.ownerEmail || null,
+      razorpayKeyId: validatedData.razorpayKeyId ?? existingPG.razorpayKeyId,
+      razorpayKeySecret:
+        validatedData.razorpayKeySecret ?? existingPG.razorpayKeySecret,
+      razorpayAccountId:
+        validatedData.razorpayAccountId ?? existingPG.razorpayAccountId,
     };
 
     // Keep PG status in sync with isActive when toggled from admin panel

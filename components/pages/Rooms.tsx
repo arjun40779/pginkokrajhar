@@ -18,8 +18,8 @@ import { Button } from '../ui/button';
 export type Room = {
   _id: string;
   dbId: string;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   roomType: string;
   maxOccupancy: number;
   currentOccupancy?: number;
@@ -32,12 +32,12 @@ export type Room = {
   slug: {
     current: string;
   };
-  heroImage: {
+  heroImage?: {
     asset: {
       _id: string;
       url: string;
     };
-  };
+  } | null;
 };
 
 const LEGACY_ROOM_FILTER_LABELS: Record<string, string> = {
@@ -55,10 +55,14 @@ export function Rooms({
   data,
   pricingIncludesSection,
   contactDetails,
+  title = 'Our Rooms & Accommodation',
+  description = 'Choose from our wide range of single, double, and triple sharing rooms with modern amenities.',
 }: Readonly<{
   data: Room[];
   pricingIncludesSection?: RoomPricingIncludesSectionData | null;
   contactDetails?: ContactDetailsData | null;
+  title?: string;
+  description?: string;
 }>) {
   const [filterType, setFilterType] = useState<string>('all');
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -103,12 +107,9 @@ export function Rooms({
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-gray-900">
-            Our Rooms & Accommodation
-          </h1>
+          <h1 className="mb-4 text-4xl font-bold text-gray-900">{title}</h1>
           <p className="mx-auto max-w-2xl text-lg text-gray-600">
-            Choose from our wide range of single, double, and triple sharing
-            rooms with modern? amenities?. ?
+            {description}
           </p>
         </div>
 

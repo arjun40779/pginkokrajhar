@@ -30,7 +30,7 @@ interface SanityWebhookPayload {
   };
 }
 
-const BASE_PUBLIC_REVALIDATION_PATHS = ['/', '/contact', '/rooms'] as const;
+const BASE_PUBLIC_REVALIDATION_PATHS = ['/', '/contact', '/pgs'] as const;
 
 function normalizeSlugValue(
   slug: string | { current?: string } | null | undefined,
@@ -56,7 +56,46 @@ function normalizeSlugValue(
   return normalizedSlug || null;
 }
 
-function revalidateDocumentPaths(payload: SanityWebhookPayload) {
+async function resolvePGRoomListingPath(
+  document: SanityWebhookPayload['document'],
+): Promise<string | null> {
+  const directSlug = normalizeSlugValue(document.slug);
+
+  if (document._type === 'pg' && directSlug) {
+    return `/pgs/${directSlug}/rooms`;
+  }
+
+  if (document._type !== 'room') {
+    return null;
+  }
+
+  if (typeof document.pgId === 'string' && document.pgId) {
+    const pg = await prisma.pG.findUnique({
+      where: { id: document.pgId },
+      select: { slug: true },
+    });
+
+    if (pg?.slug) {
+      return `/pgs/${pg.slug}/rooms`;
+    }
+  }
+
+  const sanityPgReference =
+    document.pgReference?._ref || document.pg?._ref || null;
+
+  if (!sanityPgReference) {
+    return null;
+  }
+
+  const pg = await prisma.pG.findFirst({
+    where: { sanityDocumentId: sanityPgReference },
+    select: { slug: true },
+  });
+
+  return pg?.slug ? `/pgs/${pg.slug}/rooms` : null;
+}
+
+async function revalidateDocumentPaths(payload: SanityWebhookPayload) {
   const paths = new Set<string>(BASE_PUBLIC_REVALIDATION_PATHS);
   const documentSlug = normalizeSlugValue(payload.document.slug);
 
@@ -68,10 +107,18 @@ function revalidateDocumentPaths(payload: SanityWebhookPayload) {
 
   if (payload.document._type === 'pg' && payload.document.dbId) {
     paths.add(`/pg/${payload.document.dbId}`);
+    paths.add('/pgs');
   }
 
   if (payload.document._type === 'room' && documentSlug) {
     paths.add(`/rooms/${documentSlug}`);
+    paths.add('/pgs');
+  }
+
+  const pgRoomListingPath = await resolvePGRoomListingPath(payload.document);
+
+  if (pgRoomListingPath) {
+    paths.add(pgRoomListingPath);
   }
 
   for (const path of paths) {
@@ -409,7 +456,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const revalidatedPaths = revalidateDocumentPaths(payload);
+    const revalidatedPaths = await revalidateDocumentPaths(payload);
 
     return NextResponse.json({
       message: `Successfully processed ${operation} operation for ${document._type}`,
