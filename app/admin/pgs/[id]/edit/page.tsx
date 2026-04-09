@@ -27,6 +27,9 @@ interface PGFormData {
   securityDeposit: number;
   brokerageCharges: number;
   isActive: boolean;
+  razorpayKeyId: string;
+  razorpayKeySecret: string;
+  razorpayAccountId: string;
 }
 
 const initialFormData: PGFormData = {
@@ -45,6 +48,9 @@ const initialFormData: PGFormData = {
   securityDeposit: 0,
   brokerageCharges: 0,
   isActive: true,
+  razorpayKeyId: '',
+  razorpayKeySecret: '',
+  razorpayAccountId: '',
 };
 
 export default function EditPGPage({
@@ -82,6 +88,9 @@ export default function EditPGPage({
           securityDeposit: Number(pg.securityDeposit) || 0,
           brokerageCharges: Number(pg.brokerageCharges) || 0,
           isActive: pg.isActive ?? true,
+          razorpayKeyId: pg.razorpayKeyId || '',
+          razorpayKeySecret: pg.razorpayKeySecret || '',
+          razorpayAccountId: pg.razorpayAccountId || '',
         });
       } else {
         router.push('/admin/pgs');
@@ -592,6 +601,68 @@ export default function EditPGPage({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0"
                 min="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Razorpay Settings */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Razorpay Settings (optional)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="razorpayKeyId"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Razorpay Key ID
+              </label>
+              <input
+                id="razorpayKeyId"
+                type="text"
+                name="razorpayKeyId"
+                value={formData.razorpayKeyId}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="rzp_live_..."
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="razorpayKeySecret"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Razorpay Key Secret
+              </label>
+              <input
+                id="razorpayKeySecret"
+                type="text"
+                name="razorpayKeySecret"
+                value={formData.razorpayKeySecret}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Paste secret from Razorpay dashboard"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="razorpayAccountId"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Razorpay Account / Sub-account ID
+              </label>
+              <input
+                id="razorpayAccountId"
+                type="text"
+                name="razorpayAccountId"
+                value={formData.razorpayAccountId}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="acct_... (optional, for Route)"
               />
             </div>
           </div>

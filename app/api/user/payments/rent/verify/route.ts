@@ -13,6 +13,7 @@ import {
 import {
   getRazorpayKeySecret,
   isRazorpayConfigured,
+  type RazorpayConfig,
 } from '@/lib/payments/razorpay';
 
 const verifySchema = z.object({
@@ -26,8 +27,9 @@ function verifySignature(
   orderId: string,
   paymentId: string,
   signature: string,
+  config?: RazorpayConfig,
 ) {
-  const expectedSignature = createHmac('sha256', getRazorpayKeySecret())
+  const expectedSignature = createHmac('sha256', getRazorpayKeySecret(config))
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
@@ -56,19 +58,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = verifySchema.parse(body);
 
-    if (
-      !verifySignature(
-        validatedData.razorpayOrderId,
-        validatedData.razorpayPaymentId,
-        validatedData.razorpaySignature,
-      )
-    ) {
-      return NextResponse.json(
-        { error: 'Invalid payment signature' },
-        { status: 400 },
-      );
-    }
-
     const tenant = await prisma.tenant.findFirst({
       where: {
         userId: user.id,
@@ -77,6 +66,16 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         rentAmount: true,
+        room: {
+          select: {
+            pg: {
+              select: {
+                razorpayKeyId: true,
+                razorpayKeySecret: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -84,6 +83,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'No active tenant profile found' },
         { status: 404 },
+      );
+    }
+
+    const pgConfig = tenant.room?.pg;
+    const razorpayConfig: RazorpayConfig | undefined =
+      pgConfig?.razorpayKeyId && pgConfig.razorpayKeySecret
+        ? {
+            keyId: pgConfig.razorpayKeyId,
+            keySecret: pgConfig.razorpayKeySecret,
+          }
+        : undefined;
+
+    if (
+      !verifySignature(
+        validatedData.razorpayOrderId,
+        validatedData.razorpayPaymentId,
+        validatedData.razorpaySignature,
+        razorpayConfig,
+      )
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid payment signature' },
+        { status: 400 },
       );
     }
 
@@ -189,3 +211,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -9,6 +9,7 @@ import { prisma } from '@/prisma';
 import {
   getRazorpayKeySecret,
   isRazorpayConfigured,
+  type RazorpayConfig,
 } from '@/lib/payments/razorpay';
 import { isRoomAvailableForBooking } from '@/lib/rooms/availability';
 
@@ -33,8 +34,9 @@ function verifySignature(
   orderId: string,
   paymentId: string,
   signature: string,
+  config?: RazorpayConfig,
 ) {
-  const expectedSignature = createHmac('sha256', getRazorpayKeySecret())
+  const expectedSignature = createHmac('sha256', getRazorpayKeySecret(config))
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
@@ -114,6 +116,7 @@ async function ensureTenantAssignment(
 
   let user = await tx.user.findFirst({
     where: {
+      isActive: true,
       OR: [
         { mobile: input.customerPhone },
         ...(input.customerEmail ? [{ email: input.customerEmail }] : []),
@@ -433,11 +436,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = verifySchema.parse(body);
 
+    const pg = await prisma.pG.findUnique({
+      where: { id: validatedData.pgId },
+      select: {
+        razorpayKeyId: true,
+        razorpayKeySecret: true,
+      },
+    });
+
+    const razorpayConfig: RazorpayConfig | undefined =
+      pg?.razorpayKeyId && pg.razorpayKeySecret
+        ? {
+            keyId: pg.razorpayKeyId,
+            keySecret: pg.razorpayKeySecret,
+          }
+        : undefined;
+
     if (
       !verifySignature(
         validatedData.razorpayOrderId,
         validatedData.razorpayPaymentId,
         validatedData.razorpaySignature,
+        razorpayConfig,
       )
     ) {
       return NextResponse.json(

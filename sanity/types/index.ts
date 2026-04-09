@@ -6,6 +6,7 @@ export * from './Enums.types';
 
 // Document schema types
 export * from './HeroSection.types';
+export * from './PgsHeroSection.types';
 export * from './AmenitiesSection.types';
 export * from './FacilitiesSection.types';
 export * from './FeaturesCtaSection.types';

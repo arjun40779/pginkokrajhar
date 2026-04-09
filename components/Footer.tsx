@@ -19,19 +19,21 @@ const Footer: React.FC<FooterProps> = ({ footerData }) => {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <Building2 className="h-6 w-6 text-blue-400" />
-              <span className="text-lg font-semibold">ComfortStay PG</span>
+              <span className="text-lg font-semibold">
+                {footerData?.brandSection?.companyName || 'ComfortStay PG'}
+              </span>
             </div>
             <p className="text-gray-400">
-              {cleanCmsString(footerData?.brandSection?.description)}
+              {footerData?.brandSection?.description}
             </p>
           </div>
           <div>
             <h3 className="font-semibold mb-4">
-              {cleanCmsString(footerData?.quickLinks?.title)}
+              {footerData?.quickLinks?.title}
             </h3>
             <ul className="space-y-2">
               {footerData?.quickLinks?.links?.map((link) => {
-                const linkLabel = cleanCmsString(link?.label);
+                const linkLabel = link?.label;
                 const linkUrl = cleanCmsString(link?.url) || '/';
 
                 return (
@@ -49,17 +51,17 @@ const Footer: React.FC<FooterProps> = ({ footerData }) => {
           </div>
           <div>
             <h3 className="font-semibold mb-4">
-              {cleanCmsString(footerData?.contactInfo?.title)}
+              {footerData?.contactInfo?.title}
             </h3>
             <ul className="space-y-2 text-gray-400">
-              <li>📞 {cleanCmsString(footerData?.contactInfo?.phone)}</li>
-              <li>📧 {cleanCmsString(footerData?.contactInfo?.email)}</li>
-              <li>📍 {cleanCmsString(footerData?.contactInfo?.address)}</li>
+              <li>📞 {footerData?.contactInfo?.phone}</li>
+              <li>📧 {footerData?.contactInfo?.email}</li>
+              <li>📍 {footerData?.contactInfo?.address}</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>{cleanCmsString(footerData?.copyrightText)}</p>
+          <p>{footerData?.copyrightText}</p>
         </div>
       </div>
     </footer>

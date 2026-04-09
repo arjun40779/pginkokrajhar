@@ -23,6 +23,9 @@ const pgCreateSchema = z.object({
     .number()
     .min(0, 'Brokerage charges cannot be negative')
     .optional(),
+  razorpayKeyId: z.string().optional(),
+  razorpayKeySecret: z.string().optional(),
+  razorpayAccountId: z.string().optional(),
 });
 
 // GET /api/admin/pgs - List all PGs
@@ -146,6 +149,9 @@ export async function POST(request: NextRequest) {
         startingPrice: validatedData.startingPrice,
         securityDeposit: validatedData.securityDeposit,
         brokerageCharges: validatedData.brokerageCharges || 0,
+        razorpayKeyId: validatedData.razorpayKeyId || null,
+        razorpayKeySecret: validatedData.razorpayKeySecret || null,
+        razorpayAccountId: validatedData.razorpayAccountId || null,
         totalRooms: defaultTotalRooms,
         availableRooms: defaultTotalRooms,
       },

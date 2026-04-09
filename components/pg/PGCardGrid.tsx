@@ -36,23 +36,20 @@ export function PGCardGrid({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-6 md:grid-cols-2">
       {pgs.map((pg) => {
         const heroImage = pg.images?.[0];
-        const pgName = cleanCmsString(pg.name) || 'PG Property';
-        const description = cleanCmsString(pg.description);
-        const location = [
-          cleanCmsString(pg.area),
-          cleanCmsString(pg.city),
-          cleanCmsString(pg.state),
-        ]
+        const pgName = pg.name || 'PG Property';
+        const pgNameClean = cleanCmsString(pg.name);
+        const description = pg.description;
+        const location = [pg.area, pg.city, pg.state]
           .filter(Boolean)
           .join(', ');
         const highlights =
           pg.amenities
             ?.filter((amenity) => amenity.available)
             .slice(0, 3)
-            .map((amenity) => cleanCmsString(amenity.name))
+            .map((amenity) => amenity.name)
             .filter(Boolean) ?? [];
         const roomsPath = getPGRoomsPath(pg.slug, pg.dbId);
 
@@ -65,7 +62,7 @@ export function PGCardGrid({
               {heroImage?.asset?.url ? (
                 <img
                   src={heroImage.asset.url}
-                  alt={cleanCmsString(heroImage.alt) || pgName}
+                  alt={cleanCmsString(heroImage.alt) || pgNameClean || pgName}
                   className="h-full w-full object-cover"
                 />
               ) : (

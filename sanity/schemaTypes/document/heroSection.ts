@@ -77,7 +77,6 @@ export const heroSection = defineType({
           description: 'Important for accessibility and SEO',
         },
       ],
-      validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'ctaButtons',

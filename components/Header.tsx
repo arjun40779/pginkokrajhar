@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
             <Link href="/" className="flex items-center space-x-2">
               <Building2 className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-semibold text-gray-900">
-                ComfortStay PG
+                {data?.brandSection?.companyName || 'ComfortStay PG'}
               </span>
             </Link>
 
@@ -97,13 +97,14 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
               {data?.navigation?.map((item) => {
                 const itemIcon = cleanCmsString(item.icon);
                 const itemUrl = cleanCmsString(item.url) || '/';
-                const itemLabel = cleanCmsString(item.label);
+                const itemLabel = item.label;
+                const itemLabelClean = cleanCmsString(item.label);
                 const Icon = iconMap[itemIcon] || MoreHorizontal;
                 const isActive = pathname === itemUrl;
 
                 return (
                   <Link
-                    key={`${itemUrl}-${itemLabel}`}
+                    key={`${itemUrl}-${itemLabelClean}`}
                     href={itemUrl}
                     className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors ${
                       isActive
@@ -136,7 +137,7 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
                     return <Icon className="h-4 w-4" />;
                   })()}
                   <span className="text-sm font-medium">
-                    {cleanCmsString(contactItem.label)}
+                    {contactItem.label}
                   </span>
                 </Link>
               </div>
@@ -151,13 +152,14 @@ const Header: React.FC<HeaderProps> = ({ headerData }) => {
           {bottomNavItems?.map((item) => {
             const itemIcon = cleanCmsString(item.icon);
             const itemUrl = cleanCmsString(item.url) || '/';
-            const itemLabel = cleanCmsString(item.label);
+            const itemLabel = item.label;
+            const itemLabelClean = cleanCmsString(item.label);
             const Icon = iconMap[itemIcon] || MoreHorizontal;
             const isActive = pathname === itemUrl;
 
             return (
               <Link
-                key={`${itemUrl}-${itemLabel}`}
+                key={`${itemUrl}-${itemLabelClean}`}
                 href={itemUrl}
                 className={`flex-1 flex flex-col items-center justify-center py-2 px-1 transition-all duration-200 ${
                   isActive

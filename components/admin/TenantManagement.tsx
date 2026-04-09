@@ -182,9 +182,20 @@ export default async function TenantManagement() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center font-medium text-green-600">
-                          <CreditCard className="w-4 h-4 mr-1" />₹
-                          {tenant.rentAmount.toLocaleString()}
+                        <div className="flex flex-col">
+                          <div className="flex items-center font-medium text-green-600">
+                            <CreditCard className="w-4 h-4 mr-1" />₹
+                            {tenant.rentAmount.toLocaleString()}
+                          </div>
+                          <span
+                            className={`mt-1 text-xs font-medium ${tenant.rentStatus === 'PAID' ? 'text-green-600' : tenant.rentStatus === 'OVERDUE' ? 'text-red-600' : 'text-yellow-600'}`}
+                          >
+                            {tenant.rentStatus === 'PAID'
+                              ? 'Rent Paid'
+                              : tenant.rentStatus === 'OVERDUE'
+                                ? 'Rent Overdue'
+                                : 'Rent Pending'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

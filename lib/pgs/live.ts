@@ -27,13 +27,38 @@ async function getLivePublicPGs(
       id: true,
       isActive: true,
       status: true,
-      totalRooms: true,
-      availableRooms: true,
       startingPrice: true,
+      rooms: {
+        where: {
+          isActive: true,
+        },
+        select: {
+          availabilityStatus: true,
+        },
+      },
     },
   });
 
-  return new Map(livePGs.map((pg) => [pg.id, pg]));
+  return new Map(
+    livePGs.map((pg) => {
+      const totalRooms = pg.rooms.length;
+      const availableRooms = pg.rooms.filter(
+        (room) => room.availabilityStatus === 'AVAILABLE',
+      ).length;
+
+      return [
+        pg.id,
+        {
+          id: pg.id,
+          isActive: pg.isActive,
+          status: pg.status,
+          totalRooms,
+          availableRooms,
+          startingPrice: pg.startingPrice,
+        } as LivePublicPG,
+      ];
+    }),
+  );
 }
 
 export async function getActiveLivePublicPG(

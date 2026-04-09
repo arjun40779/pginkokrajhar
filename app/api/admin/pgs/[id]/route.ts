@@ -36,6 +36,9 @@ const pgUpdateSchema = z.object({
     .optional(),
   brokerageCharges: z.number().optional(),
   isActive: z.boolean().optional(),
+  razorpayKeyId: z.string().optional(),
+  razorpayKeySecret: z.string().optional(),
+  razorpayAccountId: z.string().optional(),
 });
 
 // GET /api/admin/pgs/[id] - Get PG details
@@ -125,6 +128,11 @@ export async function PUT(
     const updateData: any = {
       ...validatedData,
       ownerEmail: validatedData.ownerEmail || null,
+      razorpayKeyId: validatedData.razorpayKeyId ?? existingPG.razorpayKeyId,
+      razorpayKeySecret:
+        validatedData.razorpayKeySecret ?? existingPG.razorpayKeySecret,
+      razorpayAccountId:
+        validatedData.razorpayAccountId ?? existingPG.razorpayAccountId,
     };
 
     // Keep PG status in sync with isActive when toggled from admin panel

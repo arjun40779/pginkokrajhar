@@ -46,6 +46,15 @@ model PG {
   brokerageCharges    Decimal?           @default(0)
   totalRooms          Int
   availableRooms      Int
+  /// Optional Razorpay configuration for this PG. When set, these
+  /// credentials are used for checkout flows linked to this property,
+  /// allowing different PGs to settle into different Razorpay accounts.
+  razorpayKeyId       String?
+  razorpayKeySecret   String?
+  /// Optional Razorpay sub-account / Route account identifier for this PG.
+  /// This can be used when integrating with Razorpay Route to direct
+  /// settlements to the PG owner's account.
+  razorpayAccountId   String?
   sanityDocumentId    String?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
