@@ -10,6 +10,8 @@ export * from './PgsHeroSection.types';
 export * from './AmenitiesSection.types';
 export * from './FacilitiesSection.types';
 export * from './FeaturesCtaSection.types';
+export * from './RoomPricingIncludesSection.types';
+export * from './PgGridSection.types';
 export * from './HeaderSection.types';
 export * from './FooterSection.types';
 export * from './LayoutSection.types';

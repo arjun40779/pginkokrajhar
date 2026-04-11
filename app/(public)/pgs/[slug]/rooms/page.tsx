@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Rooms } from '@/components/pages/Rooms';
 import { getActiveLivePublicPG } from '@/lib/pgs/live';
 import { getActiveContactDetails } from '@/lib/sanity/queries/contactDetails';
-import { getPGBySlug } from '@/lib/sanity/queries/pgSection';
+import { getPGByDbId, getPGBySlug } from '@/lib/sanity/queries/pgSection';
 import { getRoomsPageDataByPG } from '@/lib/sanity/queries/roomSection';
 import { normalizeRoomAvailabilityStatus } from '@/lib/rooms/availability';
 import { prisma } from '@/prisma';
@@ -14,10 +14,12 @@ interface Props {
 }
 
 export default async function PGRoomsPage({ params }: Readonly<Props>) {
-  const [pg, contactDetails] = await Promise.all([
+  const [pgBySlug, contactDetails] = await Promise.all([
     getPGBySlug(params.slug),
     getActiveContactDetails(),
   ]);
+  // Fallback: if no PG found by slug, treat the slug as a DB ID
+  const pg = pgBySlug ?? (await getPGByDbId(params.slug));
 
   if (!pg?.dbId) {
     notFound();

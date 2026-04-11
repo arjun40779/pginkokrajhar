@@ -100,6 +100,14 @@ export const pageSection = defineType({
                   },
                   { title: 'FAQ Section', value: 'faqSection' },
                   { title: 'PGs Hero Section', value: 'pgsHeroSection' },
+                  {
+                    title: 'Room Pricing Includes Section',
+                    value: 'roomPricingIncludesSection',
+                  },
+                  {
+                    title: 'PG Grid Section',
+                    value: 'pgGridSection',
+                  },
                 ],
               },
               description: 'This helps categorize the section type',
@@ -117,6 +125,8 @@ export const pageSection = defineType({
                 { type: 'contactLocationSection' },
                 { type: 'faqSection' },
                 { type: 'pgsHeroSection' },
+                { type: 'roomPricingIncludesSection' },
+                { type: 'pgGridSection' },
               ],
               validation: (rule) => rule.required(),
             },
@@ -193,6 +203,7 @@ export const pageSection = defineType({
                 contactSection: 'Contact Form',
                 contactLocationSection: 'Contact Location',
                 faqSection: 'FAQ',
+                roomPricingIncludesSection: 'Room Pricing Includes',
               };
 
               const displayType =

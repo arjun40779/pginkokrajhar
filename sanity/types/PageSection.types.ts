@@ -7,6 +7,8 @@ import type { FeaturesCtaSection } from './FeaturesCtaSection.types';
 import type { ContactSection } from './ContactSection.types';
 import type { ContactLocationSection } from './ContactLocationSection.types';
 import type { FAQSection } from './FAQSection.types';
+import type { RoomPricingIncludesSection } from './RoomPricingIncludesSection.types';
+import type { PgGridSection } from './PgGridSection.types';
 
 export interface PageMetadata {
   pageTitle?: string;
@@ -29,7 +31,9 @@ export type SectionType =
   | 'featuresCtaSection'
   | 'contactSection'
   | 'contactLocationSection'
-  | 'faqSection';
+  | 'faqSection'
+  | 'roomPricingIncludesSection'
+  | 'pgGridSection';
 
 export interface SectionReference {
   sectionType: SectionType;
@@ -47,7 +51,9 @@ export interface SectionReference {
     | FeaturesCtaSection
     | ContactSection
     | ContactLocationSection
-    | FAQSection;
+    | FAQSection
+    | RoomPricingIncludesSection
+    | PgGridSection;
 }
 
 export interface PageSettings {
@@ -92,7 +98,9 @@ export interface PageSectionResponse extends Omit<
         | FeaturesCtaSection
         | ContactSection
         | ContactLocationSection
-        | FAQSection;
+        | FAQSection
+        | RoomPricingIncludesSection
+        | PgGridSection;
     }
   >;
 }

@@ -43,13 +43,11 @@ async function syncPGToSanityDirect(pgId: string, action: SyncAction) {
       return { _id: sanityId };
     }
 
-    const sanityDocument = {
-      _type: 'pg',
-      _id: sanityId,
+    const dbFields = {
       dbId: pg.id,
       name: pg.name,
       slug: {
-        _type: 'slug',
+        _type: 'slug' as const,
         current: pg.slug,
       },
       description: pg.description,
@@ -77,12 +75,24 @@ async function syncPGToSanityDirect(pgId: string, action: SyncAction) {
       roomReferences: pg.rooms
         .filter((room) => room.sanityDocumentId)
         .map((room) => ({
-          _type: 'reference',
+          _type: 'reference' as const,
           _ref: room.sanityDocumentId as string,
         })),
     };
 
-    const result = await sanityClient.createOrReplace(sanityDocument);
+    let result;
+
+    if (!pg.sanityDocumentId) {
+      // First-time sync: create a new document with DB-backed fields.
+      result = await sanityClient.create({
+        _type: 'pg',
+        _id: sanityId,
+        ...dbFields,
+      });
+    } else {
+      // Subsequent syncs: only patch DB-owned fields so Sanity-only fields stay intact.
+      result = await sanityClient.patch(sanityId).set(dbFields).commit();
+    }
 
     // Update PG with Sanity document ID if not exists
     if (!pg.sanityDocumentId) {

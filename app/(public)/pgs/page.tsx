@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import { PGCardGrid } from '@/components/pg/PGCardGrid';
 import { PgsHero } from '@/components/sections/PgsHero';
-import { hydratePGsWithLiveInventory } from '@/lib/pgs/live';
-import { getAllPGs } from '@/lib/sanity/queries/pgSection';
+import { PageRenderer } from '@/components/PageRenderer';
 import { getPgsHeroSection } from '@/lib/sanity/queries/pgsHeroSection';
+import { getPageSection } from '@/lib/sanity/queries/getPageSection';
 
 export const revalidate = 60;
 
@@ -14,18 +13,16 @@ export const metadata: Metadata = {
 };
 
 export default async function PGListPage() {
-  const [pgsHero, pgs] = await Promise.all([
+  const [pgsHero, pageData] = await Promise.all([
     getPgsHeroSection(),
-    hydratePGsWithLiveInventory(await getAllPGs()),
+    getPageSection('pgs'),
   ]);
 
   return (
     <div className="min-h-screen bg-slate-50">
       {pgsHero && <PgsHero data={pgsHero} />}
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <PGCardGrid pgs={pgs} />
-      </section>
+      {pageData && <PageRenderer pageData={pageData} />}
     </div>
   );
 }

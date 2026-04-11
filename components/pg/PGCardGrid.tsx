@@ -38,7 +38,7 @@ export function PGCardGrid({
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {pgs.map((pg) => {
-        const heroImage = pg.images?.[0];
+        const heroImage = pg.heroImage ?? pg.images?.[0];
         const pgName = pg.name || 'PG Property';
         const pgNameClean = cleanCmsString(pg.name);
         const description = pg.description;

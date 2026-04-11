@@ -250,6 +250,11 @@ export const pgSchema = defineType({
       readOnly: true,
       description:
         'Verification status is managed from the admin panel and database - cannot be edited here',
+    }), // Images
+    defineField({
+      name: 'heroImage',
+      title: 'PG Hero Image',
+      type: 'image',
     }),
 
     // Images
