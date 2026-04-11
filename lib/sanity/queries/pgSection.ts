@@ -20,8 +20,6 @@ export const pgListQuery = `*[_type == "pg" && isActive == true] | order(_create
 
   genderRestriction,
   startingPrice,
-  securityDeposit,
-  brokerageCharges,
   electricityIncluded,
   waterIncluded,
   wifiIncluded,
@@ -72,58 +70,104 @@ export const pgListQuery = `*[_type == "pg" && isActive == true] | order(_create
   }
 }
 `;
-
-// GROQ query for a single PG detail with its rooms
 export const pgDetailQuery = `
-  *[_type == "pg" && dbId == $dbId && isActive == true][0] {
+*[_type == "pg" && slug.current == $slug && isActive == true][0] {
+  _id,
+  dbId,
+  name,
+  slug,
+  description,
+  address,
+  area,
+  city,
+  state,
+  pincode,
+  coordinates {
+    latitude,
+    longitude
+  },
+  ownerName,
+  ownerPhone,
+  ownerEmail,
+  genderRestriction,
+  gateClosingTime,
+  smokingAllowed,
+  drinkingAllowed,
+  startingPrice,
+  electricityIncluded,
+  waterIncluded,
+  wifiIncluded,
+  totalRooms,
+  availableRooms,
+  featured,
+  verificationStatus,
+  amenities[] {
+    name,
+    available,
+    description
+  },
+
+  heroImage {
+    asset-> {
+      _id,
+      url,
+      metadata {
+        dimensions { width, height }
+      }
+    },
+    alt,
+    caption,
+    crop,
+    hotspot
+  },
+
+  images[] {
+    asset-> {
+      _id,
+      url,
+      metadata {
+        dimensions { width, height }
+      }
+    },
+    alt,
+    caption,
+    crop,
+    hotspot
+  },
+
+  content,
+
+  "rooms": *[
+    _type == "room" &&
+    pgId._ref == ^._id &&
+    isActive == true
+  ] | order(roomNumber asc) {
     _id,
     dbId,
-    name,
+    roomNumber,
     slug,
     description,
-    address,
-    area,
-    city,
-    state,
-    pincode,
-    coordinates {
-      latitude,
-      longitude
-    },
-    ownerName,
-    ownerPhone,
-    ownerEmail,
-    genderRestriction,
-    gateClosingTime,
-    smokingAllowed,
-    drinkingAllowed,
-    startingPrice,
+    roomType,
+    maxOccupancy,
+    currentOccupancy,
+    floor,
+    roomSize,
+    hasBalcony,
+    hasAttachedBath,
+    hasAC,
+    hasFan,
+    windowDirection,
+    monthlyRent,
     securityDeposit,
-    brokerageCharges,
+    maintenanceCharges,
     electricityIncluded,
-    waterIncluded,
-    wifiIncluded,
-    totalRooms,
-    availableRooms,
+    availabilityStatus,
+    availableFrom,
     featured,
-    verificationStatus,
-    amenities[] {
+    features[] {
       name,
       available,
       description
-    },
-    heroImage: heroImage[0] {
-      asset-> {
-        _id,
-        url,
-        metadata {
-          dimensions { width, height }
-        }
-      },
-      alt,
-      caption,
-      crop,
-      hotspot
     },
     images[] {
       asset-> {
@@ -137,53 +181,10 @@ export const pgDetailQuery = `
       caption,
       crop,
       hotspot
-    },
-    content,
-    "rooms": *[_type == "room" && pgId == ^.dbId && isActive == true] | order(roomNumber asc) {
-      _id,
-      dbId,
-      roomNumber,
-      slug,
-      description,
-      roomType,
-      maxOccupancy,
-      currentOccupancy,
-      floor,
-      roomSize,
-      hasBalcony,
-      hasAttachedBath,
-      hasAC,
-      hasFan,
-      windowDirection,
-      monthlyRent,
-      securityDeposit,
-      maintenanceCharges,
-      electricityIncluded,
-      availabilityStatus,
-      availableFrom,
-      featured,
-      features[] {
-        name,
-        available,
-        description
-      },
-      images[] {
-        asset-> {
-          _id,
-          url,
-          metadata {
-            dimensions { width, height }
-          }
-        },
-        alt,
-        caption,
-        crop,
-        hotspot
-      }
     }
   }
+}
 `;
-
 // GROQ query for PG detail by slug (for public URL)
 export const pgDetailBySlugQuery = `
   *[_type == "pg" && slug.current == $slug && isActive == true][0] {
@@ -209,8 +210,6 @@ export const pgDetailBySlugQuery = `
     smokingAllowed,
     drinkingAllowed,
     startingPrice,
-    securityDeposit,
-    brokerageCharges,
     electricityIncluded,
     waterIncluded,
     wifiIncluded,
@@ -411,8 +410,6 @@ export interface SanityPG {
   smokingAllowed?: boolean;
   drinkingAllowed?: boolean;
   startingPrice: number;
-  securityDeposit: number;
-  brokerageCharges?: number;
   electricityIncluded: boolean;
   waterIncluded: boolean;
   wifiIncluded: boolean;
@@ -440,14 +437,14 @@ export async function getAllPGs(): Promise<SanityPG[]> {
   }
 }
 
-export async function getPGByDbId(dbId: string): Promise<SanityPG | null> {
+export async function getPGByDbId(slug: string): Promise<SanityPG | null> {
   try {
     return await fetchSanityQuery<SanityPG | null>({
       query: pgDetailQuery,
-      params: { dbId },
+      params: { slug },
     });
   } catch (error) {
-    console.error(`Error fetching PG ${dbId} from Sanity:`, error);
+    console.error(`Error fetching PG ${slug} from Sanity:`, error);
     return null;
   }
 }

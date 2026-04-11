@@ -308,90 +308,57 @@ export default function RoomDetailsPage({
                     <h4 className="font-medium text-gray-900 mb-3">
                       Basic Information
                     </h4>
-                    <dl className="space-y-2">
-                      <div>
-                        <dt className="text-sm text-gray-500">Room Type</dt>
-                        <dd className="text-sm font-medium text-gray-900 capitalize">
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Home className="h-4 w-4 text-gray-500" />
+                          <span className="text-xs font-medium text-gray-500">
+                            Room Type
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 capitalize">
                           {room.roomType.toLowerCase()}
-                        </dd>
+                        </span>
                       </div>
-                      <div>
-                        <dt className="text-sm text-gray-500">Floor</dt>
-                        <dd className="text-sm font-medium text-gray-900">
-                          Floor {room.floor}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-gray-500">Max Occupancy</dt>
-                        <dd className="text-sm font-medium text-gray-900">
+
+                      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <span className="text-xs font-medium text-gray-500">
+                            Max Occupancy
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
                           {room.maxOccupancy} persons
-                        </dd>
+                        </span>
                       </div>
-                      <div>
-                        <dt className="text-sm text-gray-500">
-                          Current Occupancy
-                        </dt>
-                        <dd className="text-sm font-medium text-gray-900">
+
+                      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <span className="text-xs font-medium text-gray-500">
+                            Current Occupancy
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
                           {room.currentOccupancy} / {room.maxOccupancy} (
                           {occupancyPercentage}%)
-                        </dd>
+                        </span>
                       </div>
+
                       {room.roomSize && (
-                        <div>
-                          <dt className="text-sm text-gray-500">Room Size</dt>
-                          <dd className="text-sm font-medium text-gray-900">
+                        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Home className="h-4 w-4 text-gray-500" />
+                            <span className="text-xs font-medium text-gray-500">
+                              Room Size
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">
                             {room.roomSize} sq ft
-                          </dd>
+                          </span>
                         </div>
                       )}
-                    </dl>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">
-                      Features & Amenities
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <Wind
-                          className={`h-4 w-4 mr-2 ${room.hasAC ? 'text-green-600' : 'text-gray-400'}`}
-                        />
-                        <span
-                          className={`text-sm ${room.hasAC ? 'text-green-600' : 'text-gray-500'}`}
-                        >
-                          Air Conditioning {room.hasAC ? '✓' : '✗'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Bath
-                          className={`h-4 w-4 mr-2 ${room.hasAttachedBath ? 'text-green-600' : 'text-gray-400'}`}
-                        />
-                        <span
-                          className={`text-sm ${room.hasAttachedBath ? 'text-green-600' : 'text-gray-500'}`}
-                        >
-                          Attached Bath {room.hasAttachedBath ? '✓' : '✗'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Home
-                          className={`h-4 w-4 mr-2 ${room.hasBalcony ? 'text-green-600' : 'text-gray-400'}`}
-                        />
-                        <span
-                          className={`text-sm ${room.hasBalcony ? 'text-green-600' : 'text-gray-500'}`}
-                        >
-                          Balcony {room.hasBalcony ? '✓' : '✗'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Wind
-                          className={`h-4 w-4 mr-2 ${room.hasFan ? 'text-green-600' : 'text-gray-400'}`}
-                        />
-                        <span
-                          className={`text-sm ${room.hasFan ? 'text-green-600' : 'text-gray-500'}`}
-                        >
-                          Fan {room.hasFan ? '✓' : '✗'}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </div>

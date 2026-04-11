@@ -13,7 +13,7 @@ model User {
   name      String?
   mobile    String
   email     String?  @unique
-  role      Role     @default(TENANT)
+  roles     Role[]   @default([TENANT])
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,8 +42,6 @@ model PG {
   ownerEmail          String?
   alternatePhone      String?
   startingPrice       Decimal
-  securityDeposit     Decimal
-  brokerageCharges    Decimal?           @default(0)
   totalRooms          Int
   availableRooms      Int
   /// Optional Razorpay configuration for this PG. When set, these

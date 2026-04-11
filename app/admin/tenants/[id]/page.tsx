@@ -767,7 +767,9 @@ export default function TenantDetailsPage({
                           <div>
                             <dt className="text-sm text-gray-500">Role</dt>
                             <dd className="text-sm font-medium text-gray-900 capitalize">
-                              {tenant.user.role.toLowerCase()}
+                              {tenant.user.roles
+                                .map((r: string) => r.toLowerCase())
+                                .join(', ')}
                             </dd>
                           </div>
                         </dl>

@@ -22,7 +22,6 @@ const roomCreateSchema = z.object({
   roomType: z.enum(['SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY']),
   maxOccupancy: z.number().int().positive('Max occupancy must be positive'),
   floor: z.number().int('Floor must be a number'),
-  roomSize: z.number().positive().optional(),
 
   // Features
   hasBalcony: z.boolean().default(false),

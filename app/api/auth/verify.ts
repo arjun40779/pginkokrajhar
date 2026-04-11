@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       // Create new user with registration data if provided
       const userData: any = {
         mobile: phone,
-        role: registrationData?.role || 'TENANT',
+        roles: [registrationData?.role || 'TENANT'],
       };
 
       if (registrationData?.name) {

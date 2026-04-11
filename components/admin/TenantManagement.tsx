@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {
   Plus,
   Pencil,
-  Trash2,
   User,
   Phone,
   Mail,
@@ -11,7 +10,8 @@ import {
 } from 'lucide-react';
 
 import { prisma } from '@/prisma';
-import { deleteTenantAction } from '@/app/admin/tenants/actions';
+
+import { DeleteTenantButton } from './DeleteTenantButton';
 
 import { Button } from '../ui/button';
 
@@ -213,16 +213,7 @@ export default async function TenantManagement() {
                           >
                             <Pencil className="w-4 h-4" />
                           </Link>
-                          <form
-                            action={deleteTenantAction.bind(null, tenant.id)}
-                          >
-                            <button
-                              type="submit"
-                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </form>
+                          <DeleteTenantButton tenantId={tenant.id} />
                         </div>
                       </td>
                     </tr>

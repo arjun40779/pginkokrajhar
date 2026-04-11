@@ -52,8 +52,6 @@ export async function GET(
         ownerEmail: true,
         alternatePhone: true,
         startingPrice: true,
-        securityDeposit: true,
-        brokerageCharges: true,
         totalRooms: true,
         availableRooms: true,
         createdAt: true,

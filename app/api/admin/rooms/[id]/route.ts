@@ -21,7 +21,8 @@ const roomUpdateSchema = z.object({
     .positive('Max occupancy must be positive')
     .optional(),
   floor: z.number().int('Floor must be a number').optional(),
-  roomSize: z.number().positive().optional(),
+
+  // roomSize has been removed as it is no longer needed
 
   // Features
   hasBalcony: z.boolean().optional(),
@@ -319,15 +320,38 @@ export async function DELETE(
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    // Check if room has active tenants
-    if (existingRoom.tenants.length > 0) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete room with active tenants. Please move tenants first.',
+    const hasActiveTenants = existingRoom.tenants.length > 0;
+
+    // Check if room has any bookings (past or present)
+    const roomBookingsCount = await prisma.booking.count({
+      where: { roomId: existingRoom.id },
+    });
+    const hasBookings = roomBookingsCount > 0;
+
+    // If the room cannot be safely hard-deleted, archive it instead of erroring
+    if (hasActiveTenants || hasBookings) {
+      const archivedRoom = await prisma.room.update({
+        where: { id: existingRoom.id },
+        data: {
+          isActive: false,
         },
-        { status: 400 },
-      );
+      });
+
+      const reasonParts: string[] = [];
+      if (hasActiveTenants) {
+        reasonParts.push('active tenants');
+      }
+      if (hasBookings) {
+        reasonParts.push('existing bookings');
+      }
+
+      const reason = reasonParts.join(' and ');
+
+      return NextResponse.json({
+        message: `Room archived instead of deleted because it has ${reason}.`,
+        room: archivedRoom,
+        archived: true,
+      });
     }
 
     // Sync delete to Sanity (non-blocking, before DB delete so data is available)

@@ -18,7 +18,7 @@ export interface RoomsPageData {
 
 // GROQ query for all rooms (customer-facing)
 export const roomListQuery = `
-  *[_type == "room" && isActive == true] | order(_createdAt desc) {
+  *[_type == "room"] | order(_createdAt desc) {
     _id,
     dbId,
     title,
@@ -43,7 +43,7 @@ export const roomListQuery = `
 
 export const roomsPageQuery = `
   {
-    "rooms": *[_type == "room" && isActive == true] | order(_createdAt desc) {
+    "rooms": *[_type == "room"] | order(_createdAt desc) {
       _id,
       dbId,
       title,
@@ -75,7 +75,7 @@ export const roomsPageQuery = `
 
 export const roomsPageByPGQuery = `
   {
-    "rooms": *[_type == "room" && pgId == $pgDbId && isActive == true] | order(roomNumber asc) {
+    "rooms": *[_type == "room" && pgId == $pgDbId] | order(roomNumber asc) {
       _id,
       dbId,
       title,
@@ -108,7 +108,7 @@ export const roomsPageByPGQuery = `
 
 // GROQ query for rooms by PG database ID
 export const roomsByPGQuery = `
-  *[_type == "room" && pgId == $pgDbId && isActive == true] | order(roomNumber asc) {
+  *[_type == "room" && pgId == $pgDbId] | order(roomNumber asc) {
     _id,
     dbId,
     roomNumber,
@@ -155,7 +155,7 @@ export const roomsByPGQuery = `
 
 // GROQ query for a single room detail
 export const roomDetailQuery = `
-  *[_type == "room" && dbId == $dbId && isActive == true][0] {
+  *[_type == "room" && dbId == $dbId][0] {
     _id,
     dbId,
     roomNumber,
@@ -221,7 +221,7 @@ export const roomDetailQuery = `
 `;
 
 export const roomDetailBySlugQuery = `
-  *[_type == "room" && slug.current == $slug && isActive == true][0] {
+  *[_type == "room" && slug.current == $slug][0] {
     _id,
     dbId,
     roomNumber,
@@ -287,7 +287,7 @@ export const roomDetailBySlugQuery = `
 `;
 
 export const roomPageDetailBySlugQuery = `
-  *[_type == "room" && slug.current == $slug && isActive == true][0] {
+  *[_type == "room" && slug.current == $slug][0] {
     _id,
     dbId,
     roomNumber,
@@ -359,8 +359,6 @@ export const roomPageDetailBySlugQuery = `
       smokingAllowed,
       drinkingAllowed,
       startingPrice,
-      securityDeposit,
-      brokerageCharges,
       electricityIncluded,
       waterIncluded,
       wifiIncluded,
@@ -426,8 +424,6 @@ export interface SanityRoomPageDetail extends SanityRoomWithPG {
     smokingAllowed?: boolean;
     drinkingAllowed?: boolean;
     startingPrice?: number;
-    securityDeposit?: number;
-    brokerageCharges?: number;
     electricityIncluded?: boolean;
     waterIncluded?: boolean;
     wifiIncluded?: boolean;

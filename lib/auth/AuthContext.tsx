@@ -18,7 +18,7 @@ type UserProfile = {
   name: string | null;
   mobile: string;
   email: string | null;
-  role: 'ADMIN' | 'TENANT' | 'OWNER';
+  roles: Array<'ADMIN' | 'TENANT' | 'OWNER'>;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

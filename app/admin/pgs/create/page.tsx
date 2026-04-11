@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, IndianRupee, MapPin, Phone, Save, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PGFormData {
   name: string;
@@ -18,8 +28,6 @@ interface PGFormData {
   ownerEmail: string;
   alternatePhone: string;
   startingPrice: number;
-  securityDeposit: number;
-  brokerageCharges: number;
   razorpayKeyId: string;
   razorpayKeySecret: string;
   razorpayAccountId: string;
@@ -38,8 +46,6 @@ const initialFormData: PGFormData = {
   ownerEmail: '',
   alternatePhone: '',
   startingPrice: 0,
-  securityDeposit: 0,
-  brokerageCharges: 0,
   razorpayKeyId: '',
   razorpayKeySecret: '',
   razorpayAccountId: '',
@@ -49,13 +55,11 @@ export default function CreatePGPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<PGFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const formattedStartingPrice = new Intl.NumberFormat('en-IN').format(
     formData.startingPrice || 0,
-  );
-  const formattedSecurityDeposit = new Intl.NumberFormat('en-IN').format(
-    formData.securityDeposit || 0,
   );
 
   const handleInputChange = (
@@ -106,8 +110,6 @@ export default function CreatePGPage() {
     }
     if (formData.startingPrice <= 0)
       newErrors.startingPrice = 'Starting price must be positive';
-    if (formData.securityDeposit <= 0)
-      newErrors.securityDeposit = 'Security deposit must be positive';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -120,6 +122,10 @@ export default function CreatePGPage() {
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     setLoading(true);
 
     try {
@@ -133,6 +139,7 @@ export default function CreatePGPage() {
 
       if (response.ok) {
         const pg = await response.json();
+        router.refresh();
         router.push(`/admin/pgs/${pg.id}`);
       } else {
         const error = await response.json();
@@ -389,94 +396,37 @@ export default function CreatePGPage() {
                 </div>
               </div>
 
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="startingPrice"
-                    className="mb-2 block text-sm font-medium text-slate-700"
-                  >
-                    Starting Price
-                  </label>
-                  <div
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition focus-within:ring-4 focus-within:ring-slate-100 ${
-                      errors.startingPrice
-                        ? 'border-rose-300 bg-rose-50'
-                        : 'border-slate-200 bg-white focus-within:border-slate-400'
-                    }`}
-                  >
-                    <IndianRupee className="h-4 w-4 text-slate-400" />
-                    <input
-                      id="startingPrice"
-                      type="number"
-                      name="startingPrice"
-                      value={formData.startingPrice}
-                      onChange={handleInputChange}
-                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
-                      placeholder="8000"
-                      min={0}
-                    />
-                  </div>
-                  {errors.startingPrice ? (
-                    <p className="mt-2 text-xs font-medium text-rose-600">
-                      {errors.startingPrice}
-                    </p>
-                  ) : null}
+              <div>
+                <label
+                  htmlFor="startingPrice"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Starting Price
+                </label>
+                <div
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition focus-within:ring-4 focus-within:ring-slate-100 ${
+                    errors.startingPrice
+                      ? 'border-rose-300 bg-rose-50'
+                      : 'border-slate-200 bg-white focus-within:border-slate-400'
+                  }`}
+                >
+                  <IndianRupee className="h-4 w-4 text-slate-400" />
+                  <input
+                    id="startingPrice"
+                    type="number"
+                    name="startingPrice"
+                    value={formData.startingPrice || ''}
+                    onChange={handleInputChange}
+                    className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
+                    placeholder="8000"
+                    min={0}
+                  />
                 </div>
-
-                <div>
-                  <label
-                    htmlFor="securityDeposit"
-                    className="mb-2 block text-sm font-medium text-slate-700"
-                  >
-                    Security Deposit
-                  </label>
-                  <div
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition focus-within:ring-4 focus-within:ring-slate-100 ${
-                      errors.securityDeposit
-                        ? 'border-rose-300 bg-rose-50'
-                        : 'border-slate-200 bg-white focus-within:border-slate-400'
-                    }`}
-                  >
-                    <IndianRupee className="h-4 w-4 text-slate-400" />
-                    <input
-                      id="securityDeposit"
-                      type="number"
-                      name="securityDeposit"
-                      value={formData.securityDeposit}
-                      onChange={handleInputChange}
-                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
-                      placeholder="16000"
-                      min={0}
-                    />
-                  </div>
-                  {errors.securityDeposit ? (
-                    <p className="mt-2 text-xs font-medium text-rose-600">
-                      {errors.securityDeposit}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="brokerageCharges"
-                    className="mb-2 block text-sm font-medium text-slate-700"
-                  >
-                    Brokerage Charges
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100">
-                    <IndianRupee className="h-4 w-4 text-slate-400" />
-                    <input
-                      id="brokerageCharges"
-                      type="number"
-                      name="brokerageCharges"
-                      value={formData.brokerageCharges}
-                      onChange={handleInputChange}
-                      className="w-full border-0 bg-transparent p-0 text-base text-slate-900 outline-none"
-                      placeholder="0"
-                      min={0}
-                    />
-                  </div>
-                </div>
+                {errors.startingPrice ? (
+                  <p className="mt-2 text-xs font-medium text-rose-600">
+                    {errors.startingPrice}
+                  </p>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -555,9 +505,6 @@ export default function CreatePGPage() {
                     <p className="text-sm text-slate-300">
                       ₹{formattedStartingPrice}
                     </p>
-                    <p className="text-sm text-slate-400">
-                      Deposit ₹{formattedSecurityDeposit}
-                    </p>
                   </div>
                 </div>
               </div>
@@ -575,23 +522,38 @@ export default function CreatePGPage() {
                   disabled={loading}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Create PG
-                    </>
-                  )}
+                  <Save className="h-4 w-4" />
+                  Create PG
                 </button>
               </div>
             </div>
           </form>
         </div>
       </div>
+
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create PG?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new paying guest property with the details you
+              entered.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmedSubmit();
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create PG'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

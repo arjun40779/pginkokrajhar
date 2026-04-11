@@ -33,8 +33,6 @@ interface PG {
   ownerEmail?: string;
   alternatePhone?: string;
   startingPrice: number;
-  securityDeposit: number;
-  brokerageCharges: number;
   totalRooms: number;
   availableRooms: number;
   isActive: boolean;
@@ -257,25 +255,19 @@ export default function PGDetailsPage({
   };
 
   const handleDeleteRoom = async (roomId: string) => {
-    if (!confirm('Are you sure you want to delete this room?')) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/admin/rooms/${roomId}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        // Refresh PG data to update room list
+      if (response.ok || response.status === 404) {
+        // Refresh PG data to update room list (404 = already deleted)
         fetchPG();
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to delete room');
+        await response.json().catch(() => null);
       }
     } catch (error) {
       console.error('Failed to delete room:', error);
-      alert('Failed to delete room');
     }
   };
 
@@ -533,24 +525,6 @@ export default function PGDetailsPage({
                   ₹{pg.startingPrice.toLocaleString()}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Security Deposit
-                </span>
-                <span className="text-sm text-gray-900">
-                  ₹{pg.securityDeposit.toLocaleString()}
-                </span>
-              </div>
-              {pg.brokerageCharges > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">
-                    Brokerage
-                  </span>
-                  <span className="text-sm text-gray-900">
-                    ₹{pg.brokerageCharges.toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 

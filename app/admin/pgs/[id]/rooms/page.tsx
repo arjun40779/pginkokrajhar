@@ -285,14 +285,6 @@ export default function PGRoomsPage({ params }: Readonly<PGRoomsPageProps>) {
   };
 
   const handleDeleteRoom = async (roomId: string) => {
-    if (
-      !confirm(
-        'Are you sure you want to delete this room? This action cannot be undone.',
-      )
-    ) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/admin/rooms/${roomId}`, {
         method: 'DELETE',
@@ -312,12 +304,10 @@ export default function PGRoomsPage({ params }: Readonly<PGRoomsPageProps>) {
           });
         }
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to delete room');
+        await response.json().catch(() => null);
       }
     } catch (error) {
       console.error('Failed to delete room:', error);
-      alert('Failed to delete room');
     }
   };
 

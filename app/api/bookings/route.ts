@@ -48,7 +48,6 @@ async function resolveBookingRoomDetails(roomId: string | undefined) {
         select: {
           id: true,
           name: true,
-          securityDeposit: true,
         },
       },
     },
@@ -112,7 +111,6 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         startingPrice: true,
-        securityDeposit: true,
         isActive: true,
       },
     });
@@ -128,9 +126,7 @@ export async function POST(request: NextRequest) {
     const monthlyRent = roomDetails
       ? roomDetails.monthlyRent
       : pg.startingPrice;
-    const securityDeposit = roomDetails
-      ? roomDetails.securityDeposit
-      : pg.securityDeposit;
+    const securityDeposit = roomDetails ? roomDetails.securityDeposit : 0;
     const totalAmount = Number(monthlyRent) + Number(securityDeposit);
     const bookingNotes = validatedData.notes?.trim() || null;
 

@@ -235,7 +235,6 @@ export const pageQuery = `
           },
           pricing {
             startingPrice,
-            securityDeposit,
             includesElectricity,
             includesWater,
             includesWifi

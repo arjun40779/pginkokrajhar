@@ -12,6 +12,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useAdminPGs } from '@/lib/hooks/useApi';
 
 interface PG {
@@ -64,12 +65,7 @@ export function PGManagement() {
   };
 
   const pgs = useMemo(() => mapPGs(data), [data]);
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this PG?')) {
-      return;
-    }
-
     try {
       setDeletingId(id);
       const response = await fetch(`/api/admin/pgs/${id}`, {
@@ -87,11 +83,6 @@ export function PGManagement() {
       await mutate();
     } catch (deleteError) {
       console.error('Failed to delete PG:', deleteError);
-      alert(
-        deleteError instanceof Error
-          ? deleteError.message
-          : 'Failed to delete PG',
-      );
     } finally {
       setDeletingId(null);
     }
@@ -217,13 +208,22 @@ export function PGManagement() {
                 >
                   <Pencil className="h-4 w-4" />
                 </Link>
-                <button
-                  onClick={() => handleDelete(pg.id)}
+                <ConfirmDialog
+                  trigger={
+                    <button
+                      disabled={deletingId === pg.id}
+                      className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  }
+                  title="Delete PG?"
+                  description="If this PG has active rooms or tenants it will be archived instead of fully deleted. This cannot be easily undone."
+                  confirmLabel="Delete"
+                  variant="destructive"
+                  onConfirm={() => handleDelete(pg.id)}
                   disabled={deletingId === pg.id}
-                  className="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                />
               </div>
             </div>
           ))}

@@ -3,8 +3,8 @@ import { updateSession } from './lib/supabase/middleware';
 
 type AppRole = 'ADMIN' | 'TENANT' | 'OWNER';
 
-function isResidentRoute(pathname: string) {
-  return pathname === '/resident' || pathname.startsWith('/resident/');
+function isAdminRoute(pathname: string) {
+  return pathname === '/admin' || pathname.startsWith('/admin/');
 }
 
 function applyResponseCookies(source: NextResponse, target: NextResponse) {
@@ -22,7 +22,7 @@ function getRequestCookieHeader(request: NextRequest) {
     .join('; ');
 }
 
-async function getAuthenticatedUserRole(request: NextRequest) {
+async function getAuthenticatedUserRoles(request: NextRequest) {
   const profileUrl = new URL('/api/user/profile', request.url);
   const response = await fetch(profileUrl, {
     headers: {
@@ -35,9 +35,9 @@ async function getAuthenticatedUserRole(request: NextRequest) {
     return null;
   }
 
-  const profile = (await response.json()) as { role?: AppRole };
+  const profile = (await response.json()) as { roles?: AppRole[] };
 
-  return profile.role ?? null;
+  return profile.roles ?? null;
 }
 
 export async function middleware(request: NextRequest) {
@@ -48,31 +48,38 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  if (!isResidentRoute(pathname)) {
+  // Only gate /admin routes
+  if (!isAdminRoute(pathname)) {
     return response;
   }
 
+  // If updateSession already issued a redirect, honour it
   const location = response.headers.get('location');
   if (location) {
     return response;
   }
 
-  const role = await getAuthenticatedUserRole(request);
+  const roles = await getAuthenticatedUserRoles(request);
 
-  if (role === 'ADMIN') {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/admin/dashboard';
-    redirectUrl.search = '';
+  // Not logged in → send to login with ?next= so they come back after auth
+  if (!roles) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/auth/login';
+    loginUrl.search = `?next=${encodeURIComponent(pathname)}`;
 
-    return applyResponseCookies(response, NextResponse.redirect(redirectUrl));
+    return applyResponseCookies(response, NextResponse.redirect(loginUrl));
   }
 
-  if (role && role !== 'TENANT') {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/unauthorized';
-    redirectUrl.search = '';
+  // Logged in but not an admin → unauthorized
+  if (!roles.includes('ADMIN')) {
+    const unauthorizedUrl = request.nextUrl.clone();
+    unauthorizedUrl.pathname = '/unauthorized';
+    unauthorizedUrl.search = '';
 
-    return applyResponseCookies(response, NextResponse.redirect(redirectUrl));
+    return applyResponseCookies(
+      response,
+      NextResponse.redirect(unauthorizedUrl),
+    );
   }
 
   return response;

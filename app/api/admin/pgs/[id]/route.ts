@@ -30,11 +30,6 @@ const pgUpdateSchema = z.object({
     .number()
     .positive('Starting price must be positive')
     .optional(),
-  securityDeposit: z
-    .number()
-    .min(0, 'Security deposit cannot be negative')
-    .optional(),
-  brokerageCharges: z.number().optional(),
   isActive: z.boolean().optional(),
   razorpayKeyId: z.string().optional(),
   razorpayKeySecret: z.string().optional(),
@@ -220,30 +215,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'PG not found' }, { status: 404 });
     }
 
-    // Block delete if any rooms are still assigned to this PG
-    if (existingPG.rooms.length > 0) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete PG while it still has rooms. Please delete or move all rooms first.',
-        },
-        { status: 400 },
-      );
-    }
-
-    // Check if PG has active tenants
-    const activeTenants = existingPG.rooms.some(
+    const hasRooms = existingPG.rooms.length > 0;
+    const hasActiveTenants = existingPG.rooms.some(
       (room) => room.tenants.length > 0,
     );
-    if (activeTenants) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete PG with active tenants. Please move tenants first.',
-        },
-        { status: 400 },
-      );
-    }
 
     // Soft delete - mark as archived/inactive
     const deletedPG = await prisma.pG.update({
@@ -256,9 +231,17 @@ export async function DELETE(
       console.error('Failed to sync PG delete to Sanity:', error);
     });
 
+    let message = 'PG archived successfully';
+    if (hasActiveTenants) {
+      message = 'PG archived instead of deleted because it has active tenants.';
+    } else if (hasRooms) {
+      message = 'PG archived instead of deleted because it still has rooms.';
+    }
+
     return NextResponse.json({
-      message: 'PG deleted successfully',
+      message,
       pg: deletedPG,
+      archived: true,
     });
   } catch (error) {
     console.error('Error deleting PG:', error);

@@ -13,7 +13,6 @@ import { faqSection } from './document/faqSection';
 import { pgSchema } from './document/pgSchema';
 import { roomPricingIncludesSection } from './document/roomPricingIncludesSection';
 import { roomSchema } from './document/roomSchema';
-import { roomTypeSchema } from './document/roomTypeSchema';
 import { pgsHeroSection } from './document/pgsHeroSection';
 import { pgGridSection } from './document/pgGridSection';
 
@@ -34,7 +33,6 @@ export const schemaTypes = [
   pgSchema,
   roomPricingIncludesSection,
   roomSchema,
-  roomTypeSchema,
   pgsHeroSection,
   pgGridSection,
   // Object types
