@@ -8,6 +8,8 @@ import AmenitiesSection from './sections/AmenitiesSection';
 import FacilitiesSection from './sections/FacilitiesSection';
 import FeaturesCTAs from './sections/FeaturesCTAs';
 import ContactLocationSection from './sections/ContactLocationSection';
+import RoomPricingIncludesSection from './sections/RoomPricingIncludesSection';
+import { PgGridSection } from './sections/PgGridSection';
 
 interface PageRendererProps {
   pageData: PageSectionResponse;
@@ -66,6 +68,10 @@ function SectionRenderer({
       return <FeaturesCTAs data={sectionData as any} />;
     case 'contactLocationSection':
       return <ContactLocationSection data={sectionData as any} />;
+    case 'roomPricingIncludesSection':
+      return <RoomPricingIncludesSection sectionData={sectionData as any} />;
+    case 'pgGridSection':
+      return <PgGridSection sectionData={sectionData as any} />;
     default:
       console.warn(`Unknown section type: ${sectionType}`);
       return null;

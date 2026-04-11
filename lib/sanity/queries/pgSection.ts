@@ -1,52 +1,76 @@
 import { fetchSanityQuery } from '@/sanity/lib/fetch';
 
 // GROQ query for PG listings (customer-facing)
-export const pgListQuery = `
-  *[_type == "pg" && isActive == true] | order(_createdAt desc) {
-    _id,
-    dbId,
+export const pgListQuery = `*[_type == "pg" && isActive == true] | order(_createdAt desc) {
+  _id,
+  dbId,
+  name,
+  slug,
+  description,
+  address,
+  area,
+  city,
+  state,
+  pincode,
+
+  coordinates {
+    latitude,
+    longitude
+  },
+
+  genderRestriction,
+  startingPrice,
+  securityDeposit,
+  brokerageCharges,
+  electricityIncluded,
+  waterIncluded,
+  wifiIncluded,
+
+  totalRooms,
+  availableRooms,
+  featured,
+  verificationStatus,
+
+  amenities[] {
     name,
-    slug,
-    description,
-    address,
-    area,
-    city,
-    state,
-    pincode,
-    coordinates {
-      latitude,
-      longitude
-    },
-    genderRestriction,
-    startingPrice,
-    securityDeposit,
-    brokerageCharges,
-    electricityIncluded,
-    waterIncluded,
-    wifiIncluded,
-    totalRooms,
-    availableRooms,
-    featured,
-    verificationStatus,
-    amenities[] {
-      name,
-      available,
-      description
-    },
-    images[] {
-      asset-> {
-        _id,
-        url,
-        metadata {
-          dimensions { width, height }
+    available,
+    description
+  },
+
+  heroImage {
+    asset->{
+      _id,
+      url,
+      metadata {
+        dimensions {
+          width,
+          height
         }
-      },
-      alt,
-      caption,
-      crop,
-      hotspot
-    }
+      }
+    },
+    alt,
+    caption,
+    crop,
+    hotspot
+  },
+
+  images[] {
+    asset->{
+      _id,
+      url,
+      metadata {
+        dimensions {
+          width,
+          height
+        }
+      }
+    },
+    alt,
+    caption,
+    crop,
+    hotspot
   }
+}
 `;
 
 // GROQ query for a single PG detail with its rooms
@@ -87,6 +111,19 @@ export const pgDetailQuery = `
       name,
       available,
       description
+    },
+    heroImage: heroImage[0] {
+      asset-> {
+        _id,
+        url,
+        metadata {
+          dimensions { width, height }
+        }
+      },
+      alt,
+      caption,
+      crop,
+      hotspot
     },
     images[] {
       asset-> {
@@ -186,6 +223,19 @@ export const pgDetailBySlugQuery = `
       available,
       description
     },
+    heroImage: heroImage[0] {
+      asset-> {
+        _id,
+        url,
+        metadata {
+          dimensions { width, height }
+        }
+      },
+      alt,
+      caption,
+      crop,
+      hotspot
+    },
     images[] {
       asset-> {
         _id,
@@ -259,12 +309,31 @@ export const featuredPGsQuery = `
     startingPrice,
     totalRooms,
     availableRooms,
-    images[0] {
+    heroImage: heroImage[0] {
       asset-> {
         _id,
-        url
+        url,
+        metadata {
+          dimensions { width, height }
+        }
       },
-      alt
+      alt,
+      caption,
+      crop,
+      hotspot
+    },
+    images[] {
+      asset-> {
+        _id,
+        url,
+        metadata {
+          dimensions { width, height }
+        }
+      },
+      alt,
+      caption,
+      crop,
+      hotspot
     },
     amenities[] {
       name,
@@ -352,6 +421,7 @@ export interface SanityPG {
   featured: boolean;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   amenities?: SanityAmenity[];
+  heroImage?: SanityImage;
   images?: SanityImage[];
   content?: unknown[];
   rooms?: SanityRoom[];

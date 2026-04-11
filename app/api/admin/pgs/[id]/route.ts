@@ -41,6 +41,12 @@ const pgUpdateSchema = z.object({
   razorpayAccountId: z.string().optional(),
 });
 
+const generateSlug = (name: string) =>
+  name
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/(^-|-$)/g, '');
+
 // GET /api/admin/pgs/[id] - Get PG details
 export async function GET(
   request: NextRequest,
@@ -134,6 +140,25 @@ export async function PUT(
       razorpayAccountId:
         validatedData.razorpayAccountId ?? existingPG.razorpayAccountId,
     };
+
+    // Ensure slug always tracks the current name, even for older records
+    const effectiveName = validatedData.name ?? existingPG.name;
+    const normalizedSlug = generateSlug(effectiveName);
+
+    if (normalizedSlug && normalizedSlug !== existingPG.slug) {
+      const slugConflict = await prisma.pG.findUnique({
+        where: { slug: normalizedSlug },
+      });
+
+      if (slugConflict && slugConflict.id !== existingPG.id) {
+        return NextResponse.json(
+          { error: 'Another PG already uses this generated slug' },
+          { status: 400 },
+        );
+      }
+
+      updateData.slug = normalizedSlug;
+    }
 
     // Keep PG status in sync with isActive when toggled from admin panel
     if (validatedData.isActive !== undefined) {

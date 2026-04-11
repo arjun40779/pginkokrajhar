@@ -174,6 +174,20 @@ export const pageQuery = `
           },
           backgroundColor
         },
+        _type == "roomPricingIncludesSection" => {
+          _type,
+          _id,
+          title,
+          isActive,
+          roomAmenities,
+          commonFacilities
+        },
+        _type == "pgGridSection" => {
+          _type,
+          _id,
+          title,
+          isActive
+        },
         _type == "pgSection" => {
           _type,
           _id,
