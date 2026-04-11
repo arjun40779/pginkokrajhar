@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
         name: validatedData.name,
         mobile: validatedData.phone,
         email: validatedData.email ?? null,
-        role: 'TENANT',
+        roles: ['TENANT'],
       },
       include: {
         tenant: {

@@ -30,7 +30,7 @@ export const roomSchema = defineType({
       type: 'slug',
       readOnly: true,
       validation: (Rule) => Rule.required(),
-      // hidden: true,
+      hidden: true,
     }),
     defineField({
       name: 'title',
@@ -43,15 +43,15 @@ export const roomSchema = defineType({
       type: 'text',
       rows: 4,
     }),
-    defineField({
-      name: 'isActive',
-      title: 'Is Active',
-      type: 'boolean',
-      initialValue: true,
-      readOnly: true,
-      description:
-        'Status is managed from the admin panel and database - cannot be edited here',
-    }),
+    // defineField({
+    //   name: 'isActive',
+    //   title: 'Is Active',
+    //   type: 'boolean',
+    //   initialValue: true,
+    //   readOnly: true,
+    //   description:
+    //     'Status is managed from the admin panel and database - cannot be edited here',
+    // }),
 
     defineField({
       name: 'roomType',
@@ -65,7 +65,8 @@ export const roomSchema = defineType({
           { title: 'Dormitory', value: 'DORMITORY' },
         ],
       },
-      // readOnly: true,
+      readOnly: true,
+      hidden: true,
       description: 'Room type is managed in database - cannot be edited here',
     }),
 
@@ -74,56 +75,16 @@ export const roomSchema = defineType({
       title: 'Maximum Occupancy',
       type: 'number',
       readOnly: true,
+      hidden: true,
     }),
     defineField({
       name: 'currentOccupancy',
       title: 'Current Occupancy',
       type: 'number',
       readOnly: true,
+      hidden: true,
       description:
         'Current occupancy is managed in database - cannot be edited here',
-    }),
-    defineField({
-      name: 'floor',
-      title: 'Floor Number',
-      type: 'number',
-      validation: (Rule) => Rule.required().integer(),
-    }),
-    defineField({
-      name: 'roomSize',
-      title: 'Room Size (sq ft)',
-      type: 'number',
-      validation: (Rule) => Rule.positive(),
-    }),
-    defineField({
-      name: 'hasBalcony',
-      title: 'Has Balcony',
-      type: 'boolean',
-      readOnly: true,
-    }),
-    defineField({
-      name: 'hasAttachedBath',
-      title: 'Has Attached Bath',
-      type: 'boolean',
-      readOnly: true,
-    }),
-    defineField({
-      name: 'hasAC',
-      title: 'Has AC',
-      type: 'boolean',
-      readOnly: true,
-    }),
-    defineField({
-      name: 'hasFan',
-      title: 'Has Fan',
-      type: 'boolean',
-      readOnly: true,
-    }),
-    defineField({
-      name: 'windowDirection',
-      title: 'Window Direction',
-      type: 'string',
-      readOnly: true,
     }),
 
     // Read-only Pricing (from database)
@@ -149,43 +110,6 @@ export const roomSchema = defineType({
       description: 'Charges are managed in database - cannot be edited here',
     }),
 
-    // Availability
-    defineField({
-      name: 'availabilityStatus',
-      title: 'Availability Status',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Available', value: 'AVAILABLE' },
-          { title: 'Occupied', value: 'OCCUPIED' },
-          { title: 'Under Maintenance', value: 'MAINTENANCE' },
-          { title: 'Reserved', value: 'RESERVED' },
-        ],
-        layout: 'radio',
-      },
-      readOnly: true,
-      description: 'Status is managed in database - cannot be edited here',
-    }),
-    defineField({
-      name: 'availableFrom',
-      title: 'Available From Date',
-      type: 'datetime',
-      readOnly: true,
-      description:
-        'Availability date is managed in database - cannot be edited here',
-      hidden: true,
-    }),
-
-    // PG Reference
-    defineField({
-      name: 'pgReference',
-      title: 'PG Reference',
-      type: 'reference',
-      to: [{ type: 'pg' }],
-      validation: (Rule) => Rule.required(),
-      hidden: true,
-      readOnly: true,
-    }),
     defineField({
       name: 'pgId',
       title: 'PG Database ID',
@@ -195,13 +119,16 @@ export const roomSchema = defineType({
       hidden: true,
     }),
 
-    // Meta
     defineField({
-      name: 'featured',
-      title: 'Featured Room',
-      type: 'boolean',
-      initialValue: false,
+      name: 'pgReference',
+      title: 'PG Reference',
+      type: 'reference',
+      to: [{ type: 'pg' }],
+      description:
+        'Reference to the parent PG document. Managed automatically by sync logic.',
     }),
+
+    // Meta
 
     defineField({
       name: 'heroImage',
@@ -247,35 +174,6 @@ export const roomSchema = defineType({
         },
       ],
     }),
-    // Room Features (detailed)
-    defineField({
-      name: 'features',
-      title: 'Room Features',
-      type: 'array',
-      of: [
-        {
-          type: 'object',
-          fields: [
-            {
-              name: 'name',
-              title: 'Feature Name',
-              type: 'string',
-            },
-            {
-              name: 'available',
-              title: 'Available',
-              type: 'boolean',
-              initialValue: true,
-            },
-            {
-              name: 'description',
-              title: 'Description',
-              type: 'text',
-            },
-          ],
-        },
-      ],
-    }),
 
     // Additional Content
     defineField({
@@ -296,18 +194,11 @@ export const roomSchema = defineType({
       roomType: 'roomType',
       media: 'images.0',
       pgName: 'pgReference.name',
-      isActive: 'isActive',
-      availabilityStatus: 'availabilityStatus',
     },
-    prepare({ title, roomType, media, pgName, isActive, availabilityStatus }) {
+    prepare({ title, roomType, media, pgName }) {
       let subtitle = roomType ? roomType.toLowerCase() : '';
       if (pgName) {
         subtitle += ` • ${pgName}`;
-      }
-      if (!isActive) {
-        subtitle += ' (Inactive)';
-      } else if (availabilityStatus && availabilityStatus !== 'AVAILABLE') {
-        subtitle += ` (${availabilityStatus.toLowerCase()})`;
       }
 
       return {

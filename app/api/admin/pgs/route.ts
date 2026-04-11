@@ -18,11 +18,6 @@ const pgCreateSchema = z.object({
   ownerEmail: z.union([z.email(), z.literal('')]).optional(),
   alternatePhone: z.string().optional(),
   startingPrice: z.number().positive('Starting price must be positive'),
-  securityDeposit: z.number().min(0, 'Security deposit cannot be negative'),
-  brokerageCharges: z
-    .number()
-    .min(0, 'Brokerage charges cannot be negative')
-    .optional(),
   razorpayKeyId: z.string().optional(),
   razorpayKeySecret: z.string().optional(),
   razorpayAccountId: z.string().optional(),
@@ -147,8 +142,6 @@ export async function POST(request: NextRequest) {
         ownerEmail: validatedData.ownerEmail || null,
         alternatePhone: validatedData.alternatePhone || null,
         startingPrice: validatedData.startingPrice,
-        securityDeposit: validatedData.securityDeposit,
-        brokerageCharges: validatedData.brokerageCharges || 0,
         razorpayKeyId: validatedData.razorpayKeyId || null,
         razorpayKeySecret: validatedData.razorpayKeySecret || null,
         razorpayAccountId: validatedData.razorpayAccountId || null,

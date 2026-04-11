@@ -12,6 +12,7 @@ export const pgSchema = defineType({
       type: 'string',
       readOnly: true,
       description: 'Auto-generated database ID - cannot be edited',
+      hidden: true, // Hide from default view since it's not user-friendly
     }),
 
     // Basic Info
@@ -30,6 +31,7 @@ export const pgSchema = defineType({
         maxLength: 96,
       },
       validation: (Rule) => Rule.required(),
+      hidden: true, // Hide from default view since it's auto-generated
     }),
     defineField({
       name: 'description',
@@ -43,6 +45,7 @@ export const pgSchema = defineType({
       type: 'boolean',
       initialValue: true,
       readOnly: true,
+      hidden: true, // Hide from default view since it's managed in database
       description:
         'Status is managed from the admin panel and database - cannot be edited here',
     }),
@@ -53,47 +56,35 @@ export const pgSchema = defineType({
       title: 'Full Address',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'area',
       title: 'Area',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'city',
       title: 'City',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'state',
       title: 'State',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'pincode',
       title: 'PIN Code',
       type: 'string',
       validation: (Rule) => Rule.required().min(6).max(6),
-    }),
-    defineField({
-      name: 'coordinates',
-      title: 'Location Coordinates',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'latitude',
-          title: 'Latitude',
-          type: 'number',
-        }),
-        defineField({
-          name: 'longitude',
-          title: 'Longitude',
-          type: 'number',
-        }),
-      ],
+      readOnly: true,
     }),
 
     // Contact Information
@@ -102,56 +93,26 @@ export const pgSchema = defineType({
       title: 'Owner Name',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'ownerPhone',
       title: 'Owner Phone',
       type: 'string',
       validation: (Rule) => Rule.required(),
+      readOnly: true,
     }),
     defineField({
       name: 'ownerEmail',
       title: 'Owner Email',
       type: 'email',
+      readOnly: true,
     }),
     defineField({
       name: 'alternatePhone',
       title: 'Alternate Phone',
       type: 'string',
-    }),
-
-    // Rules & Policies
-    defineField({
-      name: 'genderRestriction',
-      title: 'Gender Restriction',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Boys Only', value: 'BOYS' },
-          { title: 'Girls Only', value: 'GIRLS' },
-          { title: 'Co-ed', value: 'COED' },
-        ],
-        layout: 'radio',
-      },
-      initialValue: 'COED',
-    }),
-    defineField({
-      name: 'gateClosingTime',
-      title: 'Gate Closing Time',
-      type: 'string',
-      description: 'Format: HH:MM (e.g., 22:00)',
-    }),
-    defineField({
-      name: 'smokingAllowed',
-      title: 'Smoking Allowed',
-      type: 'boolean',
-      initialValue: false,
-    }),
-    defineField({
-      name: 'drinkingAllowed',
-      title: 'Drinking Allowed',
-      type: 'boolean',
-      initialValue: false,
+      readOnly: true,
     }),
 
     // Read-only Pricing (from database)
@@ -161,40 +122,6 @@ export const pgSchema = defineType({
       type: 'number',
       readOnly: true,
       description: 'Price is managed in database - cannot be edited here',
-    }),
-    defineField({
-      name: 'securityDeposit',
-      title: 'Security Deposit (₹)',
-      type: 'number',
-      readOnly: true,
-      description: 'Deposit is managed in database - cannot be edited here',
-    }),
-    defineField({
-      name: 'brokerageCharges',
-      title: 'Brokerage Charges (₹)',
-      type: 'number',
-      readOnly: true,
-      description: 'Charges are managed in database - cannot be edited here',
-    }),
-
-    // Utilities Included
-    defineField({
-      name: 'electricityIncluded',
-      title: 'Electricity Included',
-      type: 'boolean',
-      initialValue: true,
-    }),
-    defineField({
-      name: 'waterIncluded',
-      title: 'Water Included',
-      type: 'boolean',
-      initialValue: true,
-    }),
-    defineField({
-      name: 'wifiIncluded',
-      title: 'WiFi Included',
-      type: 'boolean',
-      initialValue: true,
     }),
 
     // Room Information (Read-only from database)
@@ -223,34 +150,10 @@ export const pgSchema = defineType({
           to: [{ type: 'room' }],
         },
       ],
-      readOnly: true,
       description:
         'Linked room documents are managed by database sync - cannot be edited here',
     }),
 
-    // Meta
-    defineField({
-      name: 'featured',
-      title: 'Featured PG',
-      type: 'boolean',
-      initialValue: false,
-    }),
-    defineField({
-      name: 'verificationStatus',
-      title: 'Verification Status',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Pending', value: 'PENDING' },
-          { title: 'Verified', value: 'VERIFIED' },
-          { title: 'Rejected', value: 'REJECTED' },
-        ],
-      },
-      initialValue: 'PENDING',
-      readOnly: true,
-      description:
-        'Verification status is managed from the admin panel and database - cannot be edited here',
-    }), // Images
     defineField({
       name: 'heroImage',
       title: 'PG Hero Image',
@@ -310,18 +213,6 @@ export const pgSchema = defineType({
               type: 'text',
             },
           ],
-        },
-      ],
-    }),
-
-    // Additional Content
-    defineField({
-      name: 'content',
-      title: 'Additional Content',
-      type: 'array',
-      of: [
-        {
-          type: 'block',
         },
       ],
     }),

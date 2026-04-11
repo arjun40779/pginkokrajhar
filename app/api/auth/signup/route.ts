@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
           name,
           mobile,
           email,
-          role: role as 'ADMIN' | 'TENANT' | 'OWNER',
+          roles: [role as 'ADMIN' | 'TENANT' | 'OWNER'],
         },
       });
     } catch (dbError) {

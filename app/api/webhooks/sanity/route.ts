@@ -247,8 +247,6 @@ async function syncPGToDatabase(
       alternatePhone: document.alternatePhone || null,
       // Default pricing values - these will be managed in the admin panel
       startingPrice: 0,
-      securityDeposit: 0,
-      brokerageCharges: 0,
       totalRooms: 0,
       availableRooms: 0,
       sanityDocumentId: document._id,
@@ -269,8 +267,6 @@ async function syncPGToDatabase(
           ...pgData,
           // Don't override pricing and room counts during updates
           startingPrice: undefined,
-          securityDeposit: undefined,
-          brokerageCharges: undefined,
           totalRooms: undefined,
           availableRooms: undefined,
         },

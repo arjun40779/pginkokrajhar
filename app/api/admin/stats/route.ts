@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       where: { id: authUser.id },
     });
 
-    if (userProfile?.role !== 'ADMIN') {
+    if (!userProfile?.roles?.includes('ADMIN')) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 },
@@ -74,10 +74,14 @@ export async function GET(request: NextRequest) {
       vacantRooms,
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.pG.count(),
-      prisma.room.count(),
-      prisma.room.count({ where: { availabilityStatus: 'OCCUPIED' } }),
-      prisma.room.count({ where: { availabilityStatus: 'AVAILABLE' } }),
+      prisma.pG.count({ where: { isActive: true } }),
+      prisma.room.count({ where: { isActive: true } }),
+      prisma.room.count({
+        where: { isActive: true, availabilityStatus: 'OCCUPIED' },
+      }),
+      prisma.room.count({
+        where: { isActive: true, availabilityStatus: 'AVAILABLE' },
+      }),
       prisma.booking.count(),
       prisma.booking.count({ where: { status: 'PENDING' } }),
       prisma.inquiry.count(),
@@ -130,9 +134,15 @@ export async function GET(request: NextRequest) {
           paymentDate: true,
         },
       }),
-      prisma.room.count({ where: { availabilityStatus: 'RESERVED' } }),
-      prisma.room.count({ where: { availabilityStatus: 'MAINTENANCE' } }),
-      prisma.room.count({ where: { availabilityStatus: 'VACANT' } }),
+      prisma.room.count({
+        where: { isActive: true, availabilityStatus: 'RESERVED' },
+      }),
+      prisma.room.count({
+        where: { isActive: true, availabilityStatus: 'MAINTENANCE' },
+      }),
+      prisma.room.count({
+        where: { isActive: true, availabilityStatus: 'VACANT' },
+      }),
     ]);
 
     // Calculate monthly revenue

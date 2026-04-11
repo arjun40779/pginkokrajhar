@@ -68,8 +68,6 @@ async function syncPGToSanityDirect(pgId: string, action: SyncAction) {
       ownerPhone: pg.ownerPhone,
       ownerEmail: pg.ownerEmail,
       startingPrice: Number(pg.startingPrice),
-      securityDeposit: Number(pg.securityDeposit),
-      brokerageCharges: Number(pg.brokerageCharges),
       totalRooms: pg.totalRooms,
       availableRooms: pg.availableRooms,
       roomReferences: pg.rooms
@@ -125,6 +123,15 @@ async function syncRoomToSanityDirect(roomId: string, action: SyncAction) {
     const sanityId = room.sanityDocumentId || `room-${room.id}`;
 
     if (action === 'delete') {
+      // Remove the reference from the parent PG's roomReferences array first,
+      // otherwise Sanity blocks the delete due to existing references.
+      const pgSanityId = room.pg.sanityDocumentId;
+      if (pgSanityId) {
+        await sanityClient
+          .patch(pgSanityId)
+          .unset([`roomReferences[_ref=="${sanityId}"]`])
+          .commit();
+      }
       await sanityClient.delete(sanityId);
       return { _id: sanityId };
     }
@@ -146,24 +153,12 @@ async function syncRoomToSanityDirect(roomId: string, action: SyncAction) {
         current: room.slug,
       },
       description: room.description,
-      isActive: room.isActive,
       roomType: room.roomType.toLowerCase(),
       maxOccupancy: room.maxOccupancy,
       currentOccupancy: room.currentOccupancy,
-      floor: room.floor,
-      roomSize: room.roomSize ? Number(room.roomSize) : undefined,
-      hasBalcony: room.hasBalcony,
-      hasAttachedBath: room.hasAttachedBath,
-      hasAC: room.hasAC,
-      hasFan: room.hasFan,
-      windowDirection: room.windowDirection?.toLowerCase(),
       monthlyRent: Number(room.monthlyRent),
       securityDeposit: Number(room.securityDeposit),
       maintenanceCharges: Number(room.maintenanceCharges),
-      electricityIncluded: room.electricityIncluded,
-      availabilityStatus: room.availabilityStatus.toLowerCase(),
-      availableFrom: room.availableFrom?.toISOString(),
-      featured: room.featured,
       pgReference: pgSanityId
         ? {
             _type: 'reference',
@@ -182,6 +177,11 @@ async function syncRoomToSanityDirect(roomId: string, action: SyncAction) {
         data: { sanityDocumentId: result._id },
       });
     }
+
+    // After creating/updating the room document, refresh the parent PG
+    // so its roomReferences array (and other DB-driven fields like
+    // totalRooms/availableRooms) stay in sync for the public PG/rooms page.
+    await syncPGToSanityDirect(room.pg.id, 'update');
 
     return result;
   } catch (error) {

@@ -52,6 +52,7 @@ interface RoomPageViewModel {
   maxOccupancy: number;
   currentOccupancy: number;
   monthlyRent: number;
+  securityDeposit: number;
 }
 
 interface LiveRoomCheckoutState {
@@ -86,7 +87,7 @@ export default async function RoomDetailPage({ params }: Readonly<Props>) {
 
   const liveCheckoutState = await getLiveRoomCheckoutState(
     room.dbId,
-    room.pgReference?.dbId,
+    room.pgReference?.dbId ?? room.pgId,
   );
   const viewModel = buildRoomPageViewModel(room, liveCheckoutState);
 
@@ -154,12 +155,15 @@ function RoomDetailContent({
 }: Readonly<RoomDetailContentProps>) {
   const { roomTitle, galleryImages, roomContent, pgContent, genderLabel } =
     viewModel;
-
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f5f7fb_0%,#ffffff_30%,#f8fafc_100%)] py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Link
-          href="/rooms"
+          href={
+            room.pgReference?.slug?.current
+              ? `/pgs/${room.pgReference.slug.current}/rooms`
+              : '/pgs'
+          }
           className="mb-6 inline-flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -204,6 +208,7 @@ function HeroPanel({
     checkoutHref,
     canCheckout,
     monthlyRent,
+    securityDeposit,
   } = viewModel;
   const dialogContactDetails = {
     whatsappNumber: contactDetails?.whatsappNumber ?? null,
@@ -255,6 +260,15 @@ function HeroPanel({
               per month
             </span>
           </div>
+
+          {securityDeposit > 0 ? (
+            <p className="mt-2 text-sm text-gray-600">
+              Security deposit:{' '}
+              <span className="font-semibold text-gray-900">
+                ₹{securityDeposit.toLocaleString()}
+              </span>
+            </p>
+          ) : null}
 
           {room.description ? (
             <p className="mt-6 text-base leading-7 text-gray-700">
@@ -371,10 +385,7 @@ function RoomDetailsSection({
   room: SanityRoomPageDetail;
   roomContent: string[];
 }>) {
-  const hasRoomDetails =
-    Boolean(room.amenities?.length) ||
-    Boolean(room.features?.length) ||
-    roomContent.length > 0;
+  const hasRoomDetails = roomContent.length > 0;
 
   if (!hasRoomDetails) {
     return null;
@@ -383,50 +394,6 @@ function RoomDetailsSection({
   return (
     <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
       <h2 className="text-xl font-semibold text-gray-900">Room Details</h2>
-
-      {room.amenities && room.amenities.length > 0 ? (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Amenities
-          </h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {room.amenities.map((amenity) => (
-              <span
-                key={amenity}
-                className="rounded-md border border-gray-200 px-3 py-1 text-sm text-gray-700"
-              >
-                {amenity}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {room.features && room.features.length > 0 ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {room.features.map((feature) => (
-            <div
-              key={feature.name}
-              className="rounded-2xl border border-gray-200 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-medium text-gray-900">{feature.name}</h3>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${feature.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  {feature.available ? 'Available' : 'Unavailable'}
-                </span>
-              </div>
-              {feature.description ? (
-                <p className="mt-2 text-sm text-gray-600">
-                  {feature.description}
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       {roomContent.length > 0 ? (
         <div className="mt-6 space-y-4 text-gray-700">
           {roomContent.map((paragraph) => (
@@ -604,9 +571,10 @@ function buildRoomPageViewModel(
   const liveCurrentOccupancy =
     liveCheckoutState?.currentOccupancy ?? room.currentOccupancy;
   const liveMonthlyRent = liveCheckoutState?.monthlyRent ?? room.monthlyRent;
+  const checkoutPgId = room.pgReference?.dbId ?? room.pgId;
   const checkoutHref =
-    room.pgReference?.dbId && room.dbId
-      ? `/booking?pgId=${room.pgReference.dbId}&roomId=${room.dbId}&rent=${liveMonthlyRent}`
+    checkoutPgId && room.dbId
+      ? `/booking?pgId=${checkoutPgId}&roomId=${room.dbId}&rent=${liveMonthlyRent}`
       : null;
   const defaultCanCheckout = isRoomAvailableForBooking(
     room.availabilityStatus,
@@ -641,6 +609,7 @@ function buildRoomPageViewModel(
     maxOccupancy: liveMaxOccupancy,
     currentOccupancy: liveCurrentOccupancy,
     monthlyRent: Number(liveMonthlyRent),
+    securityDeposit: Number(room.securityDeposit ?? 0),
   };
 }
 

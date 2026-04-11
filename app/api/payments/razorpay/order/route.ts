@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
         name: true,
         isActive: true,
         startingPrice: true,
-        securityDeposit: true,
         razorpayKeyId: true,
         razorpayKeySecret: true,
         razorpayAccountId: true,
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     const monthlyRent = Number(room?.monthlyRent ?? pg.startingPrice);
-    const securityDeposit = Number(room?.securityDeposit ?? pg.securityDeposit);
+    const securityDeposit = Number(room?.securityDeposit ?? 0);
     const totalAmount = monthlyRent + securityDeposit;
 
     const razorpayConfig =

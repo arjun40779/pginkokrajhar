@@ -44,7 +44,7 @@ async function getOrCreateProfile(authUser: AuthUser) {
       name,
       mobile,
       email: authUser.email,
-      role: 'TENANT',
+      roles: ['TENANT'],
     },
   });
 }

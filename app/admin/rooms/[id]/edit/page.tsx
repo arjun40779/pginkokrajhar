@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Room {
   id: string;
@@ -14,7 +24,6 @@ interface Room {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   floor: number;
-  roomSize?: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
   hasAC: boolean;
@@ -43,7 +52,6 @@ interface RoomFormData {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   floor: number;
-  roomSize?: number;
 
   // Features
   hasBalcony: boolean;
@@ -71,7 +79,6 @@ const initialFormData: RoomFormData = {
   roomType: 'SINGLE',
   maxOccupancy: 1,
   floor: 1,
-  roomSize: undefined,
   hasBalcony: false,
   hasAttachedBath: false,
   hasAC: false,
@@ -95,6 +102,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -114,7 +122,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
           roomType: roomData.roomType || 'SINGLE',
           maxOccupancy: roomData.maxOccupancy || 1,
           floor: roomData.floor || 1,
-          roomSize: roomData.roomSize,
           hasBalcony: roomData.hasBalcony || false,
           hasAttachedBath: roomData.hasAttachedBath || false,
           hasAC: roomData.hasAC || false,
@@ -186,8 +193,8 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
       newErrors.maxOccupancy = 'Max occupancy must be positive';
     if (formData.monthlyRent <= 0)
       newErrors.monthlyRent = 'Monthly rent must be positive';
-    if (formData.securityDeposit <= 0)
-      newErrors.securityDeposit = 'Security deposit must be positive';
+    if (formData.securityDeposit < 0)
+      newErrors.securityDeposit = 'Security deposit cannot be negative';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -200,6 +207,10 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     setSaving(true);
 
     try {
@@ -221,6 +232,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
 
       if (response.ok) {
         const updatedRoom: Room = await response.json();
+        router.refresh();
         router.push(`/admin/rooms/${updatedRoom.slug}`);
       } else {
         const error = await response.json();
@@ -230,14 +242,17 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
             const field = detail.path[0];
             fieldErrors[field] = detail.message;
           });
+          if (!fieldErrors.general) {
+            fieldErrors.general = 'Please fix the highlighted fields.';
+          }
           setErrors(fieldErrors);
         } else {
-          alert(error.error || 'Failed to update room');
+          setErrors({ general: error.error || 'Failed to update room' });
         }
       }
     } catch (error) {
       console.error('Failed to update room:', error);
-      alert('Failed to update room');
+      setErrors({ general: 'Failed to update room. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -297,6 +312,11 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {errors.general && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errors.general}
+          </div>
+        )}
         {/* PG Information (Read-only) */}
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -407,7 +427,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 id="maxOccupancy"
                 type="number"
                 name="maxOccupancy"
-                value={formData.maxOccupancy}
+                value={formData.maxOccupancy || ''}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.maxOccupancy ? 'border-red-500' : 'border-gray-300'
@@ -433,30 +453,11 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 id="floor"
                 type="number"
                 name="floor"
-                value={formData.floor}
+                value={formData.floor || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
                 max="20"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="roomSize"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Room Size (sq ft)
-              </label>
-              <input
-                id="roomSize"
-                type="number"
-                name="roomSize"
-                value={formData.roomSize || ''}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="100"
-                min="50"
               />
             </div>
 
@@ -500,80 +501,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
           </div>
         </div>
 
-        {/* Features */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="hasBalcony"
-                name="hasBalcony"
-                checked={formData.hasBalcony}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="hasBalcony"
-                className="text-sm font-medium text-gray-700"
-              >
-                Balcony
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="hasAttachedBath"
-                name="hasAttachedBath"
-                checked={formData.hasAttachedBath}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="hasAttachedBath"
-                className="text-sm font-medium text-gray-700"
-              >
-                Attached Bathroom
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="hasAC"
-                name="hasAC"
-                checked={formData.hasAC}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="hasAC"
-                className="text-sm font-medium text-gray-700"
-              >
-                Air Conditioning
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="hasFan"
-                name="hasFan"
-                checked={formData.hasFan}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="hasFan"
-                className="text-sm font-medium text-gray-700"
-              >
-                Ceiling Fan
-              </label>
-            </div>
-          </div>
-        </div>
-
         {/* Pricing */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
@@ -589,7 +516,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 id="monthlyRent"
                 type="number"
                 name="monthlyRent"
-                value={formData.monthlyRent}
+                value={formData.monthlyRent || ''}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.monthlyRent ? 'border-red-500' : 'border-gray-300'
@@ -615,7 +542,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 id="securityDeposit"
                 type="number"
                 name="securityDeposit"
-                value={formData.securityDeposit}
+                value={formData.securityDeposit || ''}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.securityDeposit ? 'border-red-500' : 'border-gray-300'
@@ -641,7 +568,7 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 id="maintenanceCharges"
                 type="number"
                 name="maintenanceCharges"
-                value={formData.maintenanceCharges}
+                value={formData.maintenanceCharges || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="500"

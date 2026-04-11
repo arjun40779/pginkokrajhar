@@ -508,12 +508,6 @@ export function PGDetailClient({ pg, dbId, contactDetails }: Readonly<Props>) {
                     ₹{pg.startingPrice.toLocaleString()}/mo
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Security Deposit</span>
-                  <span className="font-medium">
-                    ₹{pg.securityDeposit.toLocaleString()}
-                  </span>
-                </div>
               </CardContent>
             </Card>
 

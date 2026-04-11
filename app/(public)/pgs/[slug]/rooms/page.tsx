@@ -20,6 +20,7 @@ export default async function PGRoomsPage({ params }: Readonly<Props>) {
   ]);
   // Fallback: if no PG found by slug, treat the slug as a DB ID
   const pg = pgBySlug ?? (await getPGByDbId(params.slug));
+  console.log(pg);
 
   if (!pg?.dbId) {
     notFound();

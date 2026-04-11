@@ -41,7 +41,7 @@ async function resolveCanonicalUser(
         name,
         mobile: authMobile ?? '',
         email: authEmail,
-        role: 'TENANT',
+        roles: ['TENANT'],
         isActive: true,
       },
     });
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
         name,
         mobile,
         email: authUser.email,
-        role: 'TENANT', // Default role
+        roles: ['TENANT'],
       },
     });
 

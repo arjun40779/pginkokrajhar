@@ -12,12 +12,11 @@ function normalizeNextPath(next: string | null) {
   return next;
 }
 
-function getDefaultDestination(origin: string, role: AppRole) {
-  const path = role === 'ADMIN' ? '/admin/dashboard' : '/resident';
-  return `${origin}${path}`;
+function getDefaultDestination(origin: string) {
+  return `${origin}/resident`;
 }
 
-async function syncUserRole(user: {
+async function syncUserRoles(user: {
   id: string;
   email?: string;
   user_metadata?: Record<string, any>;
@@ -28,7 +27,7 @@ async function syncUserRole(user: {
 
   if (existingUser) {
     console.log('Existing user logged in:', user.id);
-    return existingUser.role as AppRole;
+    return existingUser.roles as AppRole[];
   }
 
   await prisma.user.create({
@@ -40,12 +39,12 @@ async function syncUserRole(user: {
         user.email?.split('@')[0],
       mobile: user.user_metadata?.phone || '',
       email: user.email,
-      role: 'TENANT',
+      roles: ['TENANT'],
     },
   });
 
   console.log('Created new user:', user.id);
-  return 'TENANT';
+  return ['TENANT'] as AppRole[];
 }
 
 export async function GET(request: NextRequest) {
@@ -86,7 +85,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const resolvedRole = await syncUserRole({
+    await syncUserRoles({
       id: data.user.id,
       email: data.user.email,
       user_metadata: data.user.user_metadata,
@@ -94,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     const destination = requestedNext
       ? `${origin}${requestedNext}`
-      : getDefaultDestination(origin, resolvedRole);
+      : getDefaultDestination(origin);
 
     response.headers.set('location', destination);
   } catch (dbError) {

@@ -275,6 +275,7 @@ export default function EditTenantPage({ params }: { params: { id: string } }) {
       });
 
       if (response.ok) {
+        router.refresh();
         router.push(`/admin/tenants/${params.id}`);
       } else {
         const error = await response.json();
@@ -633,7 +634,7 @@ export default function EditTenantPage({ params }: { params: { id: string } }) {
                   <input
                     type="number"
                     name="rentAmount"
-                    value={formData.rentAmount}
+                    value={formData.rentAmount || ''}
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.rentAmount ? 'border-red-300' : 'border-gray-300'
@@ -736,3 +737,4 @@ export default function EditTenantPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

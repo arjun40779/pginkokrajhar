@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getMinimumOccupancyForRoomType } from '@/lib/rooms/occupancy';
 
 interface PG {
@@ -20,7 +30,6 @@ interface RoomFormData {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   floor: number;
-  roomSize?: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
   hasAC: boolean;
@@ -39,7 +48,6 @@ const initialFormData: RoomFormData = {
   roomType: 'SINGLE',
   maxOccupancy: 1,
   floor: 1,
-  roomSize: undefined,
   hasBalcony: false,
   hasAttachedBath: false,
   hasAC: false,
@@ -56,6 +64,7 @@ export default function CreateRoomPage() {
   const [formData, setFormData] = useState<RoomFormData>(initialFormData);
   const [pgs, setPgs] = useState<PG[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -121,7 +130,10 @@ export default function CreateRoomPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    setShowConfirm(true);
+  };
 
+  const handleConfirmedSubmit = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/admin/rooms', {
@@ -131,6 +143,7 @@ export default function CreateRoomPage() {
       });
 
       if (response.ok) {
+        router.refresh();
         router.push('/admin/rooms');
       } else {
         const error = await response.json();
@@ -139,6 +152,9 @@ export default function CreateRoomPage() {
           error.details.forEach((err: any) => {
             fieldErrors[err.path[0]] = err.message;
           });
+          if (!fieldErrors.general) {
+            fieldErrors.general = 'Please fix the highlighted fields.';
+          }
           setErrors(fieldErrors);
         } else {
           setErrors({ general: error.error || 'Failed to create room' });
@@ -174,6 +190,12 @@ export default function CreateRoomPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {errors.general && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {errors.general}
+              </div>
+            )}
+
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -261,7 +283,7 @@ export default function CreateRoomPage() {
                   id="monthlyRent"
                   type="number"
                   name="monthlyRent"
-                  value={formData.monthlyRent}
+                  value={formData.monthlyRent || ''}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border rounded-md ${
                     errors.monthlyRent ? 'border-red-500' : 'border-gray-300'
@@ -272,6 +294,34 @@ export default function CreateRoomPage() {
                 {errors.monthlyRent && (
                   <p className="text-red-500 text-xs mt-1">
                     {errors.monthlyRent}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="securityDeposit"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Security Deposit (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="securityDeposit"
+                  type="number"
+                  name="securityDeposit"
+                  value={formData.securityDeposit || ''}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-md ${
+                    errors.securityDeposit
+                      ? 'border-red-500'
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="10000"
+                  min="0"
+                />
+                {errors.securityDeposit && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.securityDeposit}
                   </p>
                 )}
               </div>
@@ -291,22 +341,36 @@ export default function CreateRoomPage() {
                 disabled={loading}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Create Room
-                  </>
-                )}
+                <Save className="h-4 w-4 mr-2" />
+                Create Room
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create room?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new room with the details you entered.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmedSubmit();
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Room'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

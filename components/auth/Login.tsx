@@ -102,7 +102,7 @@ export default function Login({
 
       if (profileResponse.ok) {
         const profile = await profileResponse.json();
-        if (!nextPath && profile?.role === 'ADMIN') {
+        if (!nextPath && profile?.roles?.includes('ADMIN')) {
           destination = '/admin/dashboard';
         }
       }

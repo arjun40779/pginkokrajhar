@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { Plus, Pencil, Trash2, Bed, Users, DoorOpen } from 'lucide-react';
+import { Plus, Pencil, Bed, Users, DoorOpen } from 'lucide-react';
 
 import { prisma } from '@/prisma';
 
 import { Button } from '../ui/button';
-import { deleteRoomAction } from '@/app/admin/rooms/actions';
+import { DeleteRoomButton } from './DeleteRoomButton';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -42,6 +42,7 @@ function formatStatus(status: string) {
 
 export default async function RoomManagement() {
   const rooms = await prisma.room.findMany({
+    where: { isActive: true },
     orderBy: [{ pg: { name: 'asc' } }, { roomNumber: 'asc' }],
     include: {
       pg: {
@@ -165,14 +166,7 @@ export default async function RoomManagement() {
                         >
                           <Pencil className="w-4 h-4" />
                         </Link>
-                        <form action={deleteRoomAction.bind(null, room.id)}>
-                          <button
-                            type="submit"
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </form>
+                        <DeleteRoomButton roomId={room.id} />
                       </div>
                     </td>
                   </tr>

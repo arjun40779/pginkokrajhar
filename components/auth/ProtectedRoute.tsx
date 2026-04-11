@@ -12,6 +12,13 @@ interface ProtectedRouteProps {
   unauthorizedRedirectTo?: string;
 }
 
+function hasAnyRole(
+  userRoles: Array<'ADMIN' | 'TENANT' | 'OWNER'>,
+  allowed: Array<'ADMIN' | 'TENANT' | 'OWNER'>,
+) {
+  return userRoles.some((r) => allowed.includes(r));
+}
+
 export default function ProtectedRoute({
   children,
   allowedRoles = ['ADMIN', 'TENANT', 'OWNER'],
@@ -28,7 +35,7 @@ export default function ProtectedRoute({
         return;
       }
 
-      if (userProfile && !allowedRoles.includes(userProfile.role)) {
+      if (userProfile && !hasAnyRole(userProfile.roles, allowedRoles)) {
         router.replace(unauthorizedRedirectTo);
         return;
       }
@@ -52,7 +59,7 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user || (userProfile && !allowedRoles.includes(userProfile.role))) {
+  if (!user || (userProfile && !hasAnyRole(userProfile.roles, allowedRoles))) {
     return null;
   }
 

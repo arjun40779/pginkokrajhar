@@ -65,8 +65,6 @@ async function syncPGToSanity(pgId: string, action: 'create' | 'update') {
       ownerEmail: pg.ownerEmail,
       alternatePhone: pg.alternatePhone,
       startingPrice: Number(pg.startingPrice),
-      securityDeposit: Number(pg.securityDeposit),
-      brokerageCharges: Number(pg.brokerageCharges),
       totalRooms: pg.totalRooms,
       availableRooms: pg.availableRooms,
       roomReferences: pg.rooms

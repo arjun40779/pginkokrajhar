@@ -223,6 +223,7 @@ export default function CreateTenantPage() {
 
       if (response.ok) {
         const tenant = await response.json();
+        router.refresh();
         router.push(`/admin/tenants/${tenant.id}`);
       } else {
         const error = await response.json();
@@ -534,7 +535,7 @@ export default function CreateTenantPage() {
                   <input
                     type="number"
                     name="rentAmount"
-                    value={formData.rentAmount}
+                    value={formData.rentAmount || ''}
                     onChange={handleInputChange}
                     className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.rentAmount ? 'border-red-300' : 'border-gray-300'

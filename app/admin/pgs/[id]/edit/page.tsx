@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PGFormData {
   name: string;
@@ -24,8 +34,6 @@ interface PGFormData {
 
   // Pricing
   startingPrice: number;
-  securityDeposit: number;
-  brokerageCharges: number;
   isActive: boolean;
   razorpayKeyId: string;
   razorpayKeySecret: string;
@@ -45,8 +53,6 @@ const initialFormData: PGFormData = {
   ownerEmail: '',
   alternatePhone: '',
   startingPrice: 0,
-  securityDeposit: 0,
-  brokerageCharges: 0,
   isActive: true,
   razorpayKeyId: '',
   razorpayKeySecret: '',
@@ -60,6 +66,7 @@ export default function EditPGPage({
   const [formData, setFormData] = useState<PGFormData>(initialFormData);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -85,8 +92,6 @@ export default function EditPGPage({
           ownerEmail: pg.ownerEmail || '',
           alternatePhone: pg.alternatePhone || '',
           startingPrice: Number(pg.startingPrice) || 0,
-          securityDeposit: Number(pg.securityDeposit) || 0,
-          brokerageCharges: Number(pg.brokerageCharges) || 0,
           isActive: pg.isActive ?? true,
           razorpayKeyId: pg.razorpayKeyId || '',
           razorpayKeySecret: pg.razorpayKeySecret || '',
@@ -150,8 +155,6 @@ export default function EditPGPage({
     }
     if (formData.startingPrice <= 0)
       newErrors.startingPrice = 'Starting price must be positive';
-    if (formData.securityDeposit <= 0)
-      newErrors.securityDeposit = 'Security deposit must be positive';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -164,6 +167,10 @@ export default function EditPGPage({
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     setSaving(true);
 
     try {
@@ -176,6 +183,7 @@ export default function EditPGPage({
       });
 
       if (response.ok) {
+        router.refresh();
         router.push(`/admin/pgs/${params.id}`);
       } else {
         const error = await response.json();
@@ -532,7 +540,7 @@ export default function EditPGPage({
         {/* Pricing */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="startingPrice"
@@ -544,7 +552,7 @@ export default function EditPGPage({
                 id="startingPrice"
                 type="number"
                 name="startingPrice"
-                value={formData.startingPrice}
+                value={formData.startingPrice || ''}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   errors.startingPrice ? 'border-red-500' : 'border-gray-300'
@@ -557,51 +565,6 @@ export default function EditPGPage({
                   {errors.startingPrice}
                 </p>
               )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="securityDeposit"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Security Deposit (₹) <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="securityDeposit"
-                type="number"
-                name="securityDeposit"
-                value={formData.securityDeposit}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.securityDeposit ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="10000"
-                min="0"
-              />
-              {errors.securityDeposit && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.securityDeposit}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="brokerageCharges"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Brokerage Charges (₹)
-              </label>
-              <input
-                id="brokerageCharges"
-                type="number"
-                name="brokerageCharges"
-                value={formData.brokerageCharges}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0"
-                min="0"
-              />
             </div>
           </div>
         </div>
@@ -682,20 +645,34 @@ export default function EditPGPage({
             disabled={saving}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            )}
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
           </button>
         </div>
       </form>
+
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will update the PG property details.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmedSubmit();
+              }}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

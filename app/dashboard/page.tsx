@@ -55,7 +55,8 @@ export default function Dashboard() {
                   <strong>Mobile:</strong> {userProfile?.mobile || 'Not set'}
                 </p>
                 <p>
-                  <strong>Role:</strong> {userProfile?.role || 'TENANT'}
+                  <strong>Role:</strong>{' '}
+                  {userProfile?.roles?.join(', ') || 'TENANT'}
                 </p>
                 <p>
                   <strong>Status:</strong>{' '}

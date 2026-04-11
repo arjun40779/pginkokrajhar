@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       },
       select: {
         id: true,
-        role: true,
+        roles: true,
       },
     });
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (user.role !== 'ADMIN') {
+    if (!user.roles.includes('ADMIN')) {
       return NextResponse.json(
         {
           success: false,

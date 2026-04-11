@@ -137,7 +137,7 @@ async function ensureTenantAssignment(
       name: input.customerName,
       mobile: input.customerPhone,
       email: input.customerEmail || null,
-      role: 'TENANT',
+      roles: ['TENANT'],
     },
     include: {
       tenant: {
@@ -155,7 +155,6 @@ async function ensureTenantAssignment(
       name: input.customerName,
       mobile: input.customerPhone,
       email: input.customerEmail || null,
-      role: 'TENANT',
       isActive: true,
     },
   });
@@ -333,7 +332,6 @@ async function createConfirmedBookingFromPayment(
       name: true,
       isActive: true,
       startingPrice: true,
-      securityDeposit: true,
       area: true,
       city: true,
       ownerPhone: true,
@@ -351,7 +349,7 @@ async function createConfirmedBookingFromPayment(
   );
 
   const monthlyRent = Number(room?.monthlyRent ?? pg.startingPrice);
-  const securityDeposit = Number(room?.securityDeposit ?? pg.securityDeposit);
+  const securityDeposit = Number(room?.securityDeposit ?? 0);
   const totalAmount = monthlyRent + securityDeposit;
   const moveInDate = new Date(validatedData.checkInDate);
 

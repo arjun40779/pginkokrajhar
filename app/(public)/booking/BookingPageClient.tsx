@@ -414,7 +414,9 @@ export default function BookingPageClient({
                     </h3>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <Label htmlFor="customerName">Full Name</Label>
+                        <Label htmlFor="customerName" className="mb-1">
+                          Full Name
+                        </Label>
                         <Input
                           id="customerName"
                           value={formData.customerName}
@@ -428,7 +430,9 @@ export default function BookingPageClient({
                         />
                       </div>
                       <div>
-                        <Label htmlFor="customerPhone">Phone Number</Label>
+                        <Label htmlFor="customerPhone" className="mb-1">
+                          Phone Number
+                        </Label>
                         <Input
                           id="customerPhone"
                           value={formData.customerPhone}
@@ -444,7 +448,9 @@ export default function BookingPageClient({
                     </div>
 
                     <div>
-                      <Label htmlFor="customerEmail">Email Address</Label>
+                      <Label htmlFor="customerEmail" className="mb-1">
+                        Email Address
+                      </Label>
                       <Input
                         id="customerEmail"
                         type="email"
@@ -478,7 +484,9 @@ export default function BookingPageClient({
                   </div>
 
                   <div>
-                    <Label htmlFor="notes">Additional Notes</Label>
+                    <Label htmlFor="notes" className="mb-1">
+                      Additional Notes
+                    </Label>
                     <Textarea
                       id="notes"
                       value={formData.notes}
@@ -509,7 +517,7 @@ export default function BookingPageClient({
                         !isRoomCheckoutAvailable ||
                         !razorpayReady
                       }
-                      className="w-full"
+                      className="w-full bg-black text-white hover:bg-gray-800"
                       size="lg"
                     >
                       {submitting ? (
@@ -554,7 +562,6 @@ export default function BookingPageClient({
                     </div>
                     <div className="space-y-1 text-sm text-gray-600">
                       <p>Type: {room.roomType}</p>
-                      <p>Floor: {room.floor}</p>
                       <p>Occupancy: {room.maxOccupancy} person(s)</p>
                     </div>
                   </div>
@@ -574,7 +581,7 @@ export default function BookingPageClient({
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t pt-2 text-base font-semibold">
-                    <span>Total Due Today</span>
+                    <span>Total Amount</span>
                     <span>₹{totalAmount.toLocaleString()}</span>
                   </div>
                 </div>
@@ -592,7 +599,13 @@ export default function BookingPageClient({
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="h-4 w-4" />
-                  Need help? Call {pg.ownerPhone}
+                  Need help?{' '}
+                  <Link
+                    className="text-blue-600 hover:underline"
+                    href={'/contact'}
+                  >
+                    Contact us
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
