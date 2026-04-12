@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const city = searchParams.get('city');
     const area = searchParams.get('area');
-    const genderRestriction = searchParams.get('gender'); // BOYS, GIRLS, COED
     const availableOnly = searchParams.get('available') !== 'false'; // default true
 
     const skip = (page - 1) * limit;
@@ -24,7 +23,6 @@ export async function GET(request: NextRequest) {
       isActive: true,
       pg: {
         isActive: true,
-        verificationStatus: 'VERIFIED', // Only show verified PGs publicly
       },
     };
 
@@ -72,14 +70,6 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Add gender restriction filter
-    if (genderRestriction) {
-      where.pg = {
-        ...where.pg,
-        genderRestriction: genderRestriction,
-      };
-    }
-
     const [rooms, total] = await Promise.all([
       prisma.room.findMany({
         where,
@@ -117,10 +107,7 @@ export async function GET(request: NextRequest) {
               area: true,
               city: true,
               state: true,
-              genderRestriction: true,
               ownerPhone: true,
-              verificationStatus: true,
-              featured: true,
             },
           },
         },
@@ -142,7 +129,6 @@ export async function GET(request: NextRequest) {
         maxPrice,
         city,
         area,
-        genderRestriction,
         availableOnly,
       },
     });

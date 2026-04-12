@@ -13,7 +13,6 @@ import {
 import {
   getRazorpayKeySecret,
   isRazorpayConfigured,
-  type RazorpayConfig,
 } from '@/lib/payments/razorpay';
 
 const verifySchema = z.object({
@@ -27,9 +26,8 @@ function verifySignature(
   orderId: string,
   paymentId: string,
   signature: string,
-  config?: RazorpayConfig,
 ) {
-  const expectedSignature = createHmac('sha256', getRazorpayKeySecret(config))
+  const expectedSignature = createHmac('sha256', getRazorpayKeySecret())
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
@@ -66,16 +64,6 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         rentAmount: true,
-        room: {
-          select: {
-            pg: {
-              select: {
-                razorpayKeyId: true,
-                razorpayKeySecret: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -86,21 +74,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pgConfig = tenant.room?.pg;
-    const razorpayConfig: RazorpayConfig | undefined =
-      pgConfig?.razorpayKeyId && pgConfig.razorpayKeySecret
-        ? {
-            keyId: pgConfig.razorpayKeyId,
-            keySecret: pgConfig.razorpayKeySecret,
-          }
-        : undefined;
-
     if (
       !verifySignature(
         validatedData.razorpayOrderId,
         validatedData.razorpayPaymentId,
         validatedData.razorpaySignature,
-        razorpayConfig,
       )
     ) {
       return NextResponse.json(

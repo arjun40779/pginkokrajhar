@@ -29,7 +29,6 @@ interface PGFormData {
   alternatePhone: string;
   startingPrice: number;
   razorpayKeyId: string;
-  razorpayKeySecret: string;
   razorpayAccountId: string;
 }
 
@@ -47,7 +46,6 @@ const initialFormData: PGFormData = {
   alternatePhone: '',
   startingPrice: 0,
   razorpayKeyId: '',
-  razorpayKeySecret: '',
   razorpayAccountId: '',
 };
 
@@ -450,24 +448,6 @@ export default function CreatePGPage() {
                       onChange={handleInputChange}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                       placeholder="rzp_live_..."
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="razorpayKeySecret"
-                      className="mb-2 block text-sm font-medium text-slate-700"
-                    >
-                      Razorpay Key Secret
-                    </label>
-                    <input
-                      id="razorpayKeySecret"
-                      type="text"
-                      name="razorpayKeySecret"
-                      value={formData.razorpayKeySecret}
-                      onChange={handleInputChange}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                      placeholder="Paste secret from Razorpay dashboard"
                     />
                   </div>
 

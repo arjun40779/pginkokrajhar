@@ -19,7 +19,6 @@ const pgCreateSchema = z.object({
   alternatePhone: z.string().optional(),
   startingPrice: z.number().positive('Starting price must be positive'),
   razorpayKeyId: z.string().optional(),
-  razorpayKeySecret: z.string().optional(),
   razorpayAccountId: z.string().optional(),
 });
 
@@ -143,7 +142,6 @@ export async function POST(request: NextRequest) {
         alternatePhone: validatedData.alternatePhone || null,
         startingPrice: validatedData.startingPrice,
         razorpayKeyId: validatedData.razorpayKeyId || null,
-        razorpayKeySecret: validatedData.razorpayKeySecret || null,
         razorpayAccountId: validatedData.razorpayAccountId || null,
         totalRooms: defaultTotalRooms,
         availableRooms: defaultTotalRooms,

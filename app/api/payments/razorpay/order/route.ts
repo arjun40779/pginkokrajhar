@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/prisma';
+import { rateLimitByIp } from '@/lib/rate-limit';
 import {
   getRazorpayClient,
   getRazorpayKeyId,
@@ -17,6 +18,14 @@ const orderSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { success } = rateLimitByIp(request, 'payment:order', {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   if (!isRazorpayConfigured()) {
     return NextResponse.json(
       { error: 'Razorpay is not configured on the server' },
@@ -36,7 +45,6 @@ export async function POST(request: NextRequest) {
         isActive: true,
         startingPrice: true,
         razorpayKeyId: true,
-        razorpayKeySecret: true,
         razorpayAccountId: true,
       },
     });
@@ -87,13 +95,9 @@ export async function POST(request: NextRequest) {
     const securityDeposit = Number(room?.securityDeposit ?? 0);
     const totalAmount = monthlyRent + securityDeposit;
 
-    const razorpayConfig =
-      pg.razorpayKeyId && pg.razorpayKeySecret
-        ? {
-            keyId: pg.razorpayKeyId,
-            keySecret: pg.razorpayKeySecret,
-          }
-        : undefined;
+    const razorpayConfig = pg.razorpayKeyId
+      ? { keyId: pg.razorpayKeyId }
+      : undefined;
 
     const razorpay = getRazorpayClient(razorpayConfig);
     const order = await razorpay.orders.create({

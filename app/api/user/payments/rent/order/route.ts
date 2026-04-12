@@ -51,7 +51,6 @@ export async function POST() {
               select: {
                 id: true,
                 razorpayKeyId: true,
-                razorpayKeySecret: true,
                 razorpayAccountId: true,
               },
             },
@@ -127,13 +126,9 @@ export async function POST() {
     }
 
     const pgConfig = tenant.room?.pg;
-    const razorpayConfig =
-      pgConfig?.razorpayKeyId && pgConfig.razorpayKeySecret
-        ? {
-            keyId: pgConfig.razorpayKeyId,
-            keySecret: pgConfig.razorpayKeySecret,
-          }
-        : undefined;
+    const razorpayConfig = pgConfig?.razorpayKeyId
+      ? { keyId: pgConfig.razorpayKeyId }
+      : undefined;
 
     const razorpay = getRazorpayClient(razorpayConfig);
     const order = await razorpay.orders.create({

@@ -6,10 +6,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/prisma';
+import { rateLimitByIp } from '@/lib/rate-limit';
 import {
   getRazorpayKeySecret,
   isRazorpayConfigured,
-  type RazorpayConfig,
 } from '@/lib/payments/razorpay';
 import { isRoomAvailableForBooking } from '@/lib/rooms/availability';
 
@@ -19,9 +19,20 @@ const verifySchema = z.object({
   customerEmail: z.email().optional().or(z.literal('')),
   pgId: z.uuid('Valid PG ID is required'),
   roomId: z.uuid('Valid room ID is required').optional(),
-  checkInDate: z.string().refine((date) => !Number.isNaN(Date.parse(date)), {
-    message: 'Valid check-in date is required',
-  }),
+  checkInDate: z
+    .string()
+    .refine((date) => !Number.isNaN(Date.parse(date)), {
+      message: 'Valid check-in date is required',
+    })
+    .refine(
+      (date) => {
+        const d = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return d >= today;
+      },
+      { message: 'Check-in date cannot be in the past' },
+    ),
   notes: z.string().optional(),
   razorpayOrderId: z.string().min(1, 'Razorpay order ID is required'),
   razorpayPaymentId: z.string().min(1, 'Razorpay payment ID is required'),
@@ -34,9 +45,8 @@ function verifySignature(
   orderId: string,
   paymentId: string,
   signature: string,
-  config?: RazorpayConfig,
 ) {
-  const expectedSignature = createHmac('sha256', getRazorpayKeySecret(config))
+  const expectedSignature = createHmac('sha256', getRazorpayKeySecret())
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
@@ -53,12 +63,15 @@ function formatPaymentMonth(date: Date) {
 async function findExistingVerifiedBooking(
   tx: Prisma.TransactionClient,
   paymentId: string,
+  orderId: string,
 ) {
   return tx.booking.findFirst({
     where: {
-      notes: {
-        contains: `Payment: ${paymentId}`,
-      },
+      status: 'CONFIRMED',
+      AND: [
+        { notes: { contains: `Payment: ${paymentId}` } },
+        { notes: { contains: `Order: ${orderId}` } },
+      ],
     },
     include: {
       pg: {
@@ -319,6 +332,7 @@ async function createConfirmedBookingFromPayment(
   const existingBooking = await findExistingVerifiedBooking(
     tx,
     validatedData.razorpayPaymentId,
+    validatedData.razorpayOrderId,
   );
 
   if (existingBooking) {
@@ -423,6 +437,14 @@ async function createConfirmedBookingFromPayment(
 }
 
 export async function POST(request: NextRequest) {
+  const { success } = rateLimitByIp(request, 'payment:verify', {
+    limit: 15,
+    windowMs: 60_000,
+  });
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   if (!isRazorpayConfigured()) {
     return NextResponse.json(
       { error: 'Razorpay is not configured on the server' },
@@ -434,28 +456,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = verifySchema.parse(body);
 
-    const pg = await prisma.pG.findUnique({
-      where: { id: validatedData.pgId },
-      select: {
-        razorpayKeyId: true,
-        razorpayKeySecret: true,
-      },
-    });
-
-    const razorpayConfig: RazorpayConfig | undefined =
-      pg?.razorpayKeyId && pg.razorpayKeySecret
-        ? {
-            keyId: pg.razorpayKeyId,
-            keySecret: pg.razorpayKeySecret,
-          }
-        : undefined;
-
     if (
       !verifySignature(
         validatedData.razorpayOrderId,
         validatedData.razorpayPaymentId,
         validatedData.razorpaySignature,
-        razorpayConfig,
       )
     ) {
       return NextResponse.json(
@@ -464,8 +469,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const booking = await prisma.$transaction((tx) =>
-      createConfirmedBookingFromPayment(tx, validatedData),
+    // Quick idempotency check before starting transaction
+    const alreadyProcessed = await prisma.booking.findFirst({
+      where: {
+        status: 'CONFIRMED',
+        AND: [
+          {
+            notes: { contains: `Payment: ${validatedData.razorpayPaymentId}` },
+          },
+          { notes: { contains: `Order: ${validatedData.razorpayOrderId}` } },
+        ],
+      },
+      include: {
+        pg: {
+          select: {
+            id: true,
+            name: true,
+            area: true,
+            city: true,
+            ownerPhone: true,
+          },
+        },
+        room: {
+          select: { id: true, roomNumber: true, roomType: true, floor: true },
+        },
+      },
+    });
+
+    if (alreadyProcessed) {
+      return NextResponse.json(alreadyProcessed, { status: 200 });
+    }
+
+    const booking = await prisma.$transaction(
+      (tx) => createConfirmedBookingFromPayment(tx, validatedData),
+      { isolationLevel: 'Serializable' },
     );
 
     return NextResponse.json(booking, { status: 201 });

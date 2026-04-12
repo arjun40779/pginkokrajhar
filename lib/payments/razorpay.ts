@@ -2,7 +2,6 @@ import Razorpay from 'razorpay';
 
 export type RazorpayConfig = {
   keyId: string;
-  keySecret: string;
 };
 
 function readEnv(
@@ -23,7 +22,6 @@ function readEnv(
 export function getDefaultRazorpayConfig(): RazorpayConfig {
   return {
     keyId: readEnv('RAZORPAY_KEY_ID', 'RZORPAY_KEY_ID'),
-    keySecret: readEnv('RAZORPAY_KEY_SECRET', 'RZORPAY_KEY_SECRET'),
   };
 }
 
@@ -35,12 +33,8 @@ export function getRazorpayKeyId(config?: RazorpayConfig) {
   return getDefaultRazorpayConfig().keyId;
 }
 
-export function getRazorpayKeySecret(config?: RazorpayConfig) {
-  if (config) {
-    return config.keySecret;
-  }
-
-  return getDefaultRazorpayConfig().keySecret;
+export function getRazorpayKeySecret() {
+  return readEnv('RAZORPAY_KEY_SECRET', 'RZORPAY_KEY_SECRET');
 }
 
 export function isRazorpayConfigured() {
@@ -55,7 +49,7 @@ export function getRazorpayClient(config?: RazorpayConfig) {
 
   return new Razorpay({
     key_id: effectiveConfig.keyId,
-    key_secret: effectiveConfig.keySecret,
+    key_secret: getRazorpayKeySecret(),
   });
 }
 

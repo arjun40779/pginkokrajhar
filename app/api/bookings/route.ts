@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/prisma';
+import { rateLimitByIp } from '@/lib/rate-limit';
 import {
   formatRoomAvailabilityLabel,
   isRoomAvailableForBooking,
@@ -15,9 +16,20 @@ const bookingCreateSchema = z.object({
   customerEmail: z.email().optional().or(z.literal('')),
   pgId: z.uuid('Valid PG ID is required').optional(),
   roomId: z.uuid('Valid Room ID is required').optional(),
-  checkInDate: z.string().refine((date) => !Number.isNaN(Date.parse(date)), {
-    message: 'Valid check-in date is required',
-  }),
+  checkInDate: z
+    .string()
+    .refine((date) => !Number.isNaN(Date.parse(date)), {
+      message: 'Valid check-in date is required',
+    })
+    .refine(
+      (date) => {
+        const d = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return d >= today;
+      },
+      { message: 'Check-in date cannot be in the past' },
+    ),
   checkOutDate: z
     .string()
     .optional()
@@ -85,6 +97,14 @@ async function resolveBookingRoomDetails(roomId: string | undefined) {
 
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
+  const { success } = rateLimitByIp(request, 'bookings:create', {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const validatedData = bookingCreateSchema.parse(body);
@@ -130,7 +150,7 @@ export async function POST(request: NextRequest) {
     const totalAmount = Number(monthlyRent) + Number(securityDeposit);
     const bookingNotes = validatedData.notes?.trim() || null;
 
-    // Create booking
+    // Create booking (room status is updated only after payment verification)
     const booking = await prisma.booking.create({
       data: {
         customerName: validatedData.customerName,
@@ -150,13 +170,6 @@ export async function POST(request: NextRequest) {
         notes: bookingNotes,
       },
     });
-
-    if (validatedData.roomId) {
-      await prisma.room.update({
-        where: { id: validatedData.roomId },
-        data: { availabilityStatus: 'RESERVED' },
-      });
-    }
 
     // Return booking with details
     const bookingWithDetails = await prisma.booking.findUnique({
@@ -208,6 +221,14 @@ export async function POST(request: NextRequest) {
 
 // GET /api/bookings - Get booking by ID or phone (for public queries)
 export async function GET(request: NextRequest) {
+  const { success } = rateLimitByIp(request, 'bookings:read', {
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (!success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const bookingId = searchParams.get('id');
@@ -216,6 +237,15 @@ export async function GET(request: NextRequest) {
     if (!bookingId && !phone) {
       return NextResponse.json(
         { error: 'Either booking ID or phone number is required' },
+        { status: 400 },
+      );
+    }
+
+    // Phone-based lookup requires a valid UUID booking ID as well,
+    // or at least 10-digit phone to limit enumeration.
+    if (phone && phone.length < 10) {
+      return NextResponse.json(
+        { error: 'Valid phone number is required' },
         { status: 400 },
       );
     }
@@ -229,6 +259,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await prisma.booking.findMany({
       where,
+      take: 50,
       include: {
         pg: {
           select: {
@@ -236,7 +267,6 @@ export async function GET(request: NextRequest) {
             name: true,
             area: true,
             city: true,
-            ownerPhone: true,
           },
         },
         room: {
@@ -244,7 +274,6 @@ export async function GET(request: NextRequest) {
             id: true,
             roomNumber: true,
             roomType: true,
-            floor: true,
           },
         },
       },

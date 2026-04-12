@@ -1,3 +1,5 @@
+// Rooms with these statuses can be booked.
+// VACANT is treated as AVAILABLE — they are functionally identical.
 const BOOKABLE_ROOM_STATUSES = new Set(['AVAILABLE', 'VACANT']);
 const BLOCKED_ROOM_STATUSES = new Set(['OCCUPIED', 'MAINTENANCE', 'RESERVED']);
 
@@ -50,3 +52,4 @@ export function formatRoomAvailabilityLabel(
     .map((segment) => `${segment.charAt(0).toUpperCase()}${segment.slice(1)}`)
     .join(' ');
 }
+
