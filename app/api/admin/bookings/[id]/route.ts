@@ -102,6 +102,14 @@ async function handleRoomReassignment(
   });
 }
 
+// Valid status transitions to prevent illegal changes
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['COMPLETED', 'CANCELLED'],
+  CANCELLED: [],
+  COMPLETED: [],
+};
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } },
@@ -120,8 +128,18 @@ export async function PUT(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    // Handle status changes with side effects
+    // Validate status transition
     if (validatedData.status) {
+      const allowed = VALID_TRANSITIONS[existingBooking.status] ?? [];
+      if (!allowed.includes(validatedData.status)) {
+        return NextResponse.json(
+          {
+            error: `Cannot change status from ${existingBooking.status} to ${validatedData.status}`,
+          },
+          { status: 400 },
+        );
+      }
+
       await applyStatusRoomEffect(validatedData.status, existingBooking.roomId);
     }
 

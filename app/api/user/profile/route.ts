@@ -15,18 +15,11 @@ async function resolveCanonicalUser(
 ) {
   const metadata = authUser.user_metadata ?? {};
 
-  const candidates = await prisma.user.findMany({
-    where: {
-      OR: [
-        { id: authUser.id },
-        ...(authEmail ? [{ email: authEmail }] : []),
-        ...(authMobile ? [{ mobile: authMobile }] : []),
-      ],
-    },
+  // Only look up by auth ID — do NOT match loosely by email/phone
+  // to avoid merging unrelated accounts.
+  let canonicalUser = await prisma.user.findUnique({
+    where: { id: authUser.id },
   });
-
-  let canonicalUser =
-    candidates.find((candidate) => candidate.id === authUser.id) ?? null;
 
   if (canonicalUser === null) {
     const name =
@@ -46,7 +39,7 @@ async function resolveCanonicalUser(
       },
     });
 
-    return { canonicalUser, guestUsers: candidates };
+    return { canonicalUser };
   }
 
   const updatedName =
@@ -74,46 +67,10 @@ async function resolveCanonicalUser(
     });
   }
 
-  const guestUsers = candidates.filter(
-    (candidate) => candidate.id !== authUser.id,
-  );
-  return { canonicalUser, guestUsers };
+  return { canonicalUser };
 }
 
-async function mergeGuestUsersIntoCanonical(
-  canonicalUserId: string,
-  guestUsers: Array<{ id: string; isActive: boolean }>,
-) {
-  if (guestUsers.length === 0) {
-    return;
-  }
-
-  const canonicalTenant = await prisma.tenant.findFirst({
-    where: { userId: canonicalUserId },
-  });
-
-  for (const guest of guestUsers) {
-    const guestTenants = await prisma.tenant.findMany({
-      where: { userId: guest.id },
-    });
-
-    if (guestTenants.length > 0 && !canonicalTenant) {
-      await prisma.tenant.updateMany({
-        where: { userId: guest.id },
-        data: { userId: canonicalUserId },
-      });
-    }
-
-    if (guest.isActive) {
-      await prisma.user.update({
-        where: { id: guest.id },
-        data: { isActive: false },
-      });
-    }
-  }
-}
-
-async function getOrCreateMergedUserProfile(authUser: {
+async function getOrCreateUserProfile(authUser: {
   id: string;
   email?: string | null;
   user_metadata?: Record<string, any> | null;
@@ -125,15 +82,10 @@ async function getOrCreateMergedUserProfile(authUser: {
     (metadata.phone as string | undefined) ||
     null;
 
-  const { canonicalUser, guestUsers } = await resolveCanonicalUser(
+  const { canonicalUser } = await resolveCanonicalUser(
     authUser,
     authEmail,
     authMobile,
-  );
-
-  await mergeGuestUsersIntoCanonical(
-    canonicalUser.id,
-    guestUsers.map((guest) => ({ id: guest.id, isActive: guest.isActive })),
   );
 
   return canonicalUser;
@@ -163,11 +115,11 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(
-      'Profile API: Attempting database query and merge for user:',
+      'Profile API: Attempting database query for user:',
       authUser.id,
     );
 
-    const user = await getOrCreateMergedUserProfile(authUser);
+    const user = await getOrCreateUserProfile(authUser);
 
     console.log('Profile API: Database query result:', {
       hasUser: !!user,

@@ -32,7 +32,6 @@ const pgUpdateSchema = z.object({
     .optional(),
   isActive: z.boolean().optional(),
   razorpayKeyId: z.string().optional(),
-  razorpayKeySecret: z.string().optional(),
   razorpayAccountId: z.string().optional(),
 });
 
@@ -130,8 +129,6 @@ export async function PUT(
       ...validatedData,
       ownerEmail: validatedData.ownerEmail || null,
       razorpayKeyId: validatedData.razorpayKeyId ?? existingPG.razorpayKeyId,
-      razorpayKeySecret:
-        validatedData.razorpayKeySecret ?? existingPG.razorpayKeySecret,
       razorpayAccountId:
         validatedData.razorpayAccountId ?? existingPG.razorpayAccountId,
     };

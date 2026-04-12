@@ -44,11 +44,10 @@ model PG {
   startingPrice       Decimal
   totalRooms          Int
   availableRooms      Int
-  /// Optional Razorpay configuration for this PG. When set, these
-  /// credentials are used for checkout flows linked to this property,
-  /// allowing different PGs to settle into different Razorpay accounts.
+  /// Optional Razorpay configuration for this PG. When set, the key ID
+  /// is used for checkout flows linked to this property. The key secret
+  /// is always read from the RAZORPAY_KEY_SECRET environment variable.
   razorpayKeyId       String?
-  razorpayKeySecret   String?
   /// Optional Razorpay sub-account / Route account identifier for this PG.
   /// This can be used when integrating with Razorpay Route to direct
   /// settlements to the PG owner's account.
