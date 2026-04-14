@@ -266,7 +266,6 @@ export const pageQuery = `
             roomType,
             currentOccupancy,
             maxOccupancy,
-            floor,
             roomSize,
             hasBalcony,
             hasAttachedBathroom,
