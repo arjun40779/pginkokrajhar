@@ -216,6 +216,14 @@ export const pgSchema = defineType({
         },
       ],
     }),
+    // Rules & Regulations
+    defineField({
+      name: 'rulesRegulations',
+      title: 'Rules & Regulations',
+      type: 'reference',
+      to: [{ type: 'rulesRegulations' }],
+      description: 'Attach a Rules & Regulations document to this PG',
+    }),
   ],
 
   preview: {
