@@ -47,6 +47,7 @@ export function useAdminBookings(
   status = '',
   search = '',
   limit = 10,
+  pgId = '',
 ) {
   const params = new URLSearchParams({
     page: String(page),
@@ -54,6 +55,7 @@ export function useAdminBookings(
   });
   if (status) params.set('status', status);
   if (search) params.set('search', search);
+  if (pgId) params.set('pgId', pgId);
   return useSWR(`/api/admin/bookings?${params}`, fetcher, defaultConfig);
 }
 

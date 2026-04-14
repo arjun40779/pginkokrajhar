@@ -27,6 +27,7 @@ import {
 } from '@/lib/rooms/availability';
 import { RoomDetailActionButtons } from '@/components/RoomDetailActionButtons';
 import { prisma } from '@/prisma';
+import Image from 'next/image';
 
 export const revalidate = 60;
 
@@ -221,7 +222,9 @@ function HeroPanel({
       <div className="grid gap-0 lg:items-start lg:grid-cols-[1.3fr_0.7fr]">
         <div className="self-start border-b border-gray-200 bg-gray-100 lg:h-[460px] lg:border-b-0 lg:border-r">
           {heroImage?.asset.url ? (
-            <img
+            <Image
+              width={0}
+              height={0}
               src={heroImage.asset.url}
               alt={heroImage.alt ?? roomTitle}
               className="h-[320px] w-full object-cover sm:h-[320px] lg:h-full"
@@ -521,7 +524,6 @@ function SidebarSection({
           {currentOccupancy > 0
             ? renderFact('Current Occupancy', `${currentOccupancy} residents`)
             : null}
-          {room.floor ? renderFact('Floor', `Floor ${room.floor}`) : null}
           {room.windowDirection
             ? renderFact('Window', formatEnumLabel(room.windowDirection))
             : null}
