@@ -18,6 +18,7 @@ import {
   FileText,
   UserCheck,
 } from 'lucide-react';
+import AdmissionDetails from '@/components/admin/AdmissionDetails';
 
 interface Tenant {
   id: string;
@@ -49,7 +50,6 @@ interface Tenant {
     id: string;
     roomNumber: string;
     roomType: string;
-    floor: number;
     monthlyRent: number;
     securityDeposit: number;
     availabilityStatus: string;
@@ -76,6 +76,23 @@ interface Tenant {
   _count: {
     payments: number;
   };
+  bookings?: Array<{
+    id: string;
+    dateOfBirth?: string;
+    schoolCollege?: string;
+    foodType?: string;
+    foodRestrictions?: string;
+    fatherName?: string;
+    fatherPhone?: string;
+    motherName?: string;
+    motherPhone?: string;
+    village?: string;
+    postOffice?: string;
+    pinCode?: string;
+    district?: string;
+    addressState?: string;
+    declarationAccepted?: boolean;
+  }>;
 }
 
 const StatusBadge = ({
@@ -445,6 +462,11 @@ export default function TenantDetailsPage({
                 </div>
               </div>
 
+              {/* Admission Details */}
+              {tenant.bookings?.[0] && (
+                <AdmissionDetails booking={tenant.bookings[0]} />
+              )}
+
               {/* Room Information */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -472,12 +494,6 @@ export default function TenantDetailsPage({
                         <dt className="text-sm text-gray-500">Room Type</dt>
                         <dd className="text-sm font-medium text-gray-900 capitalize">
                           {tenant.room.roomType.toLowerCase()}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-gray-500">Floor</dt>
-                        <dd className="text-sm font-medium text-gray-900">
-                          Floor {tenant.room.floor}
                         </dd>
                       </div>
                       <div>

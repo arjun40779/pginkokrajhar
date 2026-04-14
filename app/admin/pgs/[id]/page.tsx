@@ -54,7 +54,6 @@ interface Room {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   currentOccupancy: number;
-  floor: number;
   monthlyRent: number;
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   hasBalcony: boolean;
@@ -165,8 +164,6 @@ const RoomCard = ({
           </div>
           <div className="flex items-center text-sm text-gray-500 mb-2">
             <span className="capitalize">{room.roomType.toLowerCase()}</span>
-            <span className="mx-2">•</span>
-            <span>Floor {room.floor}</span>
             <span className="mx-2">•</span>
             <span>Max {room.maxOccupancy}</span>
           </div>

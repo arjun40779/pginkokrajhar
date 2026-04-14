@@ -12,6 +12,7 @@ import {
 import { prisma } from '@/prisma';
 
 import { DeleteTenantButton } from './DeleteTenantButton';
+import PGFilter from './PGFilter';
 
 import { Button } from '../ui/button';
 
@@ -40,24 +41,34 @@ function getStatusColor(status: string) {
   }
 }
 
-export default async function TenantManagement() {
-  const tenants = await prisma.tenant.findMany({
-    orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
-    include: {
-      room: {
-        select: {
-          id: true,
-          roomNumber: true,
-          pg: {
-            select: {
-              id: true,
-              name: true,
+export default async function TenantManagement({
+  pgId,
+}: Readonly<{ pgId?: string }>) {
+  const [tenants, pgs] = await Promise.all([
+    prisma.tenant.findMany({
+      orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
+      where: pgId ? { room: { pgId } } : undefined,
+      include: {
+        room: {
+          select: {
+            id: true,
+            roomNumber: true,
+            pg: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.pG.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -76,6 +87,10 @@ export default async function TenantManagement() {
             Add Tenant
           </Link>
         </Button>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <PGFilter pgs={pgs} />
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

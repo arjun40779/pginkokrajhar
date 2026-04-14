@@ -29,7 +29,6 @@ interface RoomFormData {
   pgId: string;
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
-  floor: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
   hasAC: boolean;
@@ -37,7 +36,6 @@ interface RoomFormData {
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
-  electricityIncluded: boolean;
   availableFrom?: string;
 }
 
@@ -47,7 +45,6 @@ const initialFormData: RoomFormData = {
   pgId: '',
   roomType: 'SINGLE',
   maxOccupancy: 1,
-  floor: 1,
   hasBalcony: false,
   hasAttachedBath: false,
   hasAC: false,
@@ -55,7 +52,6 @@ const initialFormData: RoomFormData = {
   monthlyRent: 0,
   securityDeposit: 0,
   maintenanceCharges: 0,
-  electricityIncluded: true,
   availableFrom: undefined,
 };
 

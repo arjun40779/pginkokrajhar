@@ -5,6 +5,7 @@ import { prisma } from '@/prisma';
 
 import { Button } from '../ui/button';
 import { DeleteRoomButton } from './DeleteRoomButton';
+import PGFilter from './PGFilter';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -40,19 +41,31 @@ function formatStatus(status: string) {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
-export default async function RoomManagement() {
-  const rooms = await prisma.room.findMany({
-    where: { isActive: true },
-    orderBy: [{ pg: { name: 'asc' } }, { roomNumber: 'asc' }],
-    include: {
-      pg: {
-        select: {
-          id: true,
-          name: true,
+export default async function RoomManagement({
+  pgId,
+}: Readonly<{ pgId?: string }>) {
+  const [rooms, pgs] = await Promise.all([
+    prisma.room.findMany({
+      where: {
+        isActive: true,
+        ...(pgId ? { pgId } : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      include: {
+        pg: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.pG.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -73,6 +86,10 @@ export default async function RoomManagement() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <PGFilter pgs={pgs} />
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -83,9 +100,6 @@ export default async function RoomManagement() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   PG Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Floor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
@@ -108,7 +122,7 @@ export default async function RoomManagement() {
               {rooms.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-6 py-12 text-center text-sm text-gray-500"
                   >
                     No rooms found.
@@ -130,9 +144,6 @@ export default async function RoomManagement() {
                       >
                         {room.pg.name}
                       </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {room.floor}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1">
