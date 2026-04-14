@@ -39,7 +39,6 @@ export async function GET(
             id: true,
             roomNumber: true,
             roomType: true,
-            floor: true,
             monthlyRent: true,
           },
         },

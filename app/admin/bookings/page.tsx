@@ -12,11 +12,21 @@ import {
   BedDouble,
   IndianRupee,
   Mail,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAdminBookings } from '@/lib/hooks/useApi';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAdminBookings, useAdminPGs } from '@/lib/hooks/useApi';
+import AdmissionDetails from '@/components/admin/AdmissionDetails';
 
 interface Booking {
   id: string;
@@ -32,6 +42,20 @@ interface Booking {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   notes?: string;
   createdAt: string;
+  dateOfBirth?: string;
+  schoolCollege?: string;
+  foodType?: string;
+  foodRestrictions?: string;
+  fatherName?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherPhone?: string;
+  village?: string;
+  postOffice?: string;
+  pinCode?: string;
+  district?: string;
+  addressState?: string;
+  declarationAccepted?: boolean;
   pg?: {
     id: string;
     name: string;
@@ -79,13 +103,22 @@ export default function AdminBookingsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [pgFilter, setPgFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: pgData } = useAdminPGs(1, 100) as {
+    data?: { pgs?: { id: string; name: string }[] };
+  };
+  const pgs = pgData?.pgs || [];
+
   const { data, error, isLoading, mutate } = useAdminBookings(
     page,
     statusFilter === 'all' ? '' : statusFilter,
     search,
     10,
+    pgFilter === 'all' ? '' : pgFilter,
   ) as {
     data?: BookingsResponse;
     error?: Error;
@@ -143,6 +176,28 @@ export default function AdminBookingsPage() {
               />
             </div>
           </form>
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-gray-500" />
+            <Select
+              value={pgFilter}
+              onValueChange={(value) => {
+                setPgFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by PG" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All PGs</SelectItem>
+                {pgs.map((pg) => (
+                  <SelectItem key={pg.id} value={pg.id}>
+                    {pg.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex flex-wrap gap-2">
             {['all', 'PENDING', 'CONFIRMED', 'CANCELLED'].map((status) => (
               <Button
@@ -348,7 +403,29 @@ export default function AdminBookingsPage() {
                       Complete
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === booking.id ? null : booking.id,
+                      )
+                    }
+                  >
+                    {expandedId === booking.id ? (
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                    )}
+                    Details
+                  </Button>
                 </div>
+
+                {expandedId === booking.id && (
+                  <div className="col-span-full mt-4 border-t border-gray-200 pt-4">
+                    <AdmissionDetails booking={booking} />
+                  </div>
+                )}
               </div>
             );
           })}

@@ -21,7 +21,6 @@ const roomCreateSchema = z.object({
   // Room Details
   roomType: z.enum(['SINGLE', 'DOUBLE', 'TRIPLE', 'DORMITORY']),
   maxOccupancy: z.number().int().positive('Max occupancy must be positive'),
-  floor: z.number().int('Floor must be a number'),
 
   // Features
   hasBalcony: z.boolean().default(false),
@@ -33,7 +32,6 @@ const roomCreateSchema = z.object({
   monthlyRent: z.number().positive('Monthly rent must be positive'),
   securityDeposit: z.number().min(0, 'Security deposit cannot be negative'),
   maintenanceCharges: z.number().default(0),
-  electricityIncluded: z.boolean().default(true),
 
   availableFrom: z
     .string()

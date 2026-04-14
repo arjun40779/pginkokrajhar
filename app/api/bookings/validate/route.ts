@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
           maxOccupancy: true,
           currentOccupancy: true,
           availabilityStatus: true,
-          electricityIncluded: true,
           pg: {
             select: {
               id: true,
@@ -67,7 +66,6 @@ export async function GET(request: NextRequest) {
             room.currentOccupancy,
             room.maxOccupancy,
           ),
-          electricityIncluded: room.electricityIncluded,
           isAvailable: isRoomAvailableForBooking(
             room.availabilityStatus,
             room.currentOccupancy,

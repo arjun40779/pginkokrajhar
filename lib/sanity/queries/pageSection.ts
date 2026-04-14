@@ -188,6 +188,15 @@ export const pageQuery = `
           title,
           isActive
         },
+        _type == "pgsHeroSection" => {
+          _type,
+          _id,
+          title,
+          isActive,
+          eyebrow,
+          mainTitle,
+          subtitle
+        },
         _type == "pgSection" => {
           _type,
           _id,
@@ -266,7 +275,6 @@ export const pageQuery = `
             roomType,
             currentOccupancy,
             maxOccupancy,
-            floor,
             roomSize,
             hasBalcony,
             hasAttachedBathroom,

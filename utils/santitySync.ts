@@ -143,32 +143,49 @@ async function syncRoomToSanityDirect(roomId: string, action: SyncAction) {
       pgSanityId = syncedPG._id;
     }
 
-    const sanityDocument = {
-      _type: 'room',
-      _id: sanityId,
+    const dbFields = {
       dbId: room.id,
       roomNumber: room.roomNumber,
       slug: {
-        _type: 'slug',
+        _type: 'slug' as const,
         current: room.slug,
       },
       description: room.description,
+      isActive: room.isActive,
       roomType: room.roomType.toLowerCase(),
       maxOccupancy: room.maxOccupancy,
       currentOccupancy: room.currentOccupancy,
+      hasBalcony: room.hasBalcony,
+      hasAttachedBath: room.hasAttachedBath,
+      hasAC: room.hasAC,
+      hasFan: room.hasFan,
       monthlyRent: Number(room.monthlyRent),
       securityDeposit: Number(room.securityDeposit),
       maintenanceCharges: Number(room.maintenanceCharges),
+      availabilityStatus: room.availabilityStatus,
       pgReference: pgSanityId
         ? {
-            _type: 'reference',
+            _type: 'reference' as const,
             _ref: pgSanityId,
           }
         : undefined,
       pgId: room.pgId,
     };
 
-    const result = await sanityClient.createOrReplace(sanityDocument);
+    let result;
+
+    if (!room.sanityDocumentId) {
+      // First-time sync: create a new document with DB-backed fields.
+      result = await sanityClient.create({
+        _type: 'room',
+        _id: sanityId,
+        ...dbFields,
+      });
+    } else {
+      // Subsequent syncs: only patch DB-owned fields so Sanity-only
+      // fields (images, heroImage, features, amenities, content) stay intact.
+      result = await sanityClient.patch(sanityId).set(dbFields).commit();
+    }
 
     // Update room with Sanity document ID if not exists
     if (!room.sanityDocumentId) {

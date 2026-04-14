@@ -11,7 +11,6 @@ export type ResidentTenant = {
     id: string;
     roomNumber: string;
     roomType: string;
-    floor: number;
     monthlyRent: number | string;
     securityDeposit: number | string;
     maxOccupancy: number;

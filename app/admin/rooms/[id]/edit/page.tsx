@@ -4,16 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 interface Room {
   id: string;
@@ -23,7 +13,6 @@ interface Room {
   pgId: string;
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
-  floor: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
   hasAC: boolean;
@@ -31,7 +20,6 @@ interface Room {
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
-  electricityIncluded: boolean;
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   availableFrom?: string;
   isActive: boolean;
@@ -51,7 +39,6 @@ interface RoomFormData {
   // Room Details
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
-  floor: number;
 
   // Features
   hasBalcony: boolean;
@@ -63,7 +50,6 @@ interface RoomFormData {
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
-  electricityIncluded: boolean;
 
   // Availability
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
@@ -78,7 +64,6 @@ const initialFormData: RoomFormData = {
   description: '',
   roomType: 'SINGLE',
   maxOccupancy: 1,
-  floor: 1,
   hasBalcony: false,
   hasAttachedBath: false,
   hasAC: false,
@@ -86,7 +71,6 @@ const initialFormData: RoomFormData = {
   monthlyRent: 0,
   securityDeposit: 0,
   maintenanceCharges: 0,
-  electricityIncluded: true,
   availabilityStatus: 'AVAILABLE',
   availableFrom: undefined,
   isActive: true,
@@ -102,7 +86,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -121,7 +104,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
           description: roomData.description || '',
           roomType: roomData.roomType || 'SINGLE',
           maxOccupancy: roomData.maxOccupancy || 1,
-          floor: roomData.floor || 1,
           hasBalcony: roomData.hasBalcony || false,
           hasAttachedBath: roomData.hasAttachedBath || false,
           hasAC: roomData.hasAC || false,
@@ -129,7 +111,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
           monthlyRent: Number(roomData.monthlyRent) || 0,
           securityDeposit: Number(roomData.securityDeposit) || 0,
           maintenanceCharges: Number(roomData.maintenanceCharges) || 0,
-          electricityIncluded: roomData.electricityIncluded ?? true,
           availabilityStatus: roomData.availabilityStatus || 'AVAILABLE',
           availableFrom: roomData.availableFrom
             ? new Date(roomData.availableFrom).toISOString().split('T')[0]
@@ -207,10 +188,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
       return;
     }
 
-    setShowConfirm(true);
-  };
-
-  const handleConfirmedSubmit = async () => {
     setSaving(true);
 
     try {
@@ -444,25 +421,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
 
             <div>
               <label
-                htmlFor="floor"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Floor <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="floor"
-                type="number"
-                name="floor"
-                value={formData.floor || ''}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                min="0"
-                max="20"
-              />
-            </div>
-
-            <div>
-              <label
                 htmlFor="availabilityStatus"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
@@ -574,23 +532,6 @@ export default function EditRoomPage({ params }: Readonly<EditRoomPageProps>) {
                 placeholder="500"
                 min="0"
               />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="electricityIncluded"
-                name="electricityIncluded"
-                checked={formData.electricityIncluded}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="electricityIncluded"
-                className="text-sm font-medium text-gray-700"
-              >
-                Electricity Included
-              </label>
             </div>
           </div>
         </div>

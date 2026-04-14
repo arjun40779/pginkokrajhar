@@ -22,6 +22,12 @@ export const structure: StructureResolver = (S) =>
         ),
 
       S.listItem()
+        .title('📋 Rules & Regulations')
+        .child(
+          S.documentTypeList('rulesRegulations').title('Rules & Regulations'),
+        ),
+
+      S.listItem()
         .title('⚙️ Site Settings')
         .child(
           S.list()

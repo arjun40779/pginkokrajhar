@@ -225,11 +225,6 @@ export const roomSchema = defineType({
       name: 'newest',
       by: [{ field: '_createdAt', direction: 'desc' }],
     },
-    {
-      title: 'Floor (Low to High)',
-      name: 'floorAsc',
-      by: [{ field: 'floor', direction: 'asc' }],
-    },
   ],
 });
 

@@ -397,8 +397,7 @@ export function PGDetailClient({ pg, dbId, contactDetails }: Readonly<Props>) {
                                 </Badge>
                               </div>
                               <p className="text-sm text-gray-500 mt-0.5">
-                                {ROOM_TYPE_LABEL[room.roomType]} · Floor{' '}
-                                {room.floor}
+                                {ROOM_TYPE_LABEL[room.roomType]}
                                 {room.roomSize
                                   ? ` · ${room.roomSize} sq ft`
                                   : ''}

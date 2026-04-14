@@ -150,7 +150,6 @@ export const pgDetailQuery = `
     roomType,
     maxOccupancy,
     currentOccupancy,
-    floor,
     roomSize,
     hasBalcony,
     hasAttachedBath,
@@ -160,7 +159,6 @@ export const pgDetailQuery = `
     monthlyRent,
     securityDeposit,
     maintenanceCharges,
-    electricityIncluded,
     availabilityStatus,
     availableFrom,
     featured,
@@ -222,7 +220,7 @@ export const pgDetailBySlugQuery = `
       available,
       description
     },
-    heroImage: heroImage[0] {
+    heroImage {
       asset-> {
         _id,
         url,
@@ -258,7 +256,6 @@ export const pgDetailBySlugQuery = `
       roomType,
       maxOccupancy,
       currentOccupancy,
-      floor,
       roomSize,
       hasBalcony,
       hasAttachedBath,
@@ -268,7 +265,6 @@ export const pgDetailBySlugQuery = `
       monthlyRent,
       securityDeposit,
       maintenanceCharges,
-      electricityIncluded,
       availabilityStatus,
       availableFrom,
       featured,
@@ -308,7 +304,7 @@ export const featuredPGsQuery = `
     startingPrice,
     totalRooms,
     availableRooms,
-    heroImage: heroImage[0] {
+    heroImage {
       asset-> {
         _id,
         url,
@@ -372,7 +368,6 @@ export interface SanityRoom {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   currentOccupancy: number;
-  floor: number;
   roomSize?: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
@@ -382,7 +377,6 @@ export interface SanityRoom {
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges: number;
-  electricityIncluded: boolean;
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   availableFrom?: string;
   featured: boolean;

@@ -31,7 +31,6 @@ interface Room {
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
   currentOccupancy: number;
-  floor: number;
   roomSize?: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
@@ -40,7 +39,6 @@ interface Room {
   monthlyRent: number;
   securityDeposit: number;
   maintenanceCharges?: number;
-  electricityIncluded: boolean;
   availabilityStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED';
   availableFrom?: string;
   isActive: boolean;
@@ -405,13 +403,6 @@ export default function RoomDetailsPage({
                       <p className="text-sm text-gray-600">Maintenance</p>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Electricity:</span>{' '}
-                    {room.electricityIncluded ? 'Included' : 'Not Included'}
-                  </p>
                 </div>
               </div>
             </div>

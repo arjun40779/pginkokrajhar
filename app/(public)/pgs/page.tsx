@@ -20,8 +20,6 @@ export default async function PGListPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {pgsHero && <PgsHero data={pgsHero} />}
-
       {pageData && <PageRenderer pageData={pageData} />}
     </div>
   );

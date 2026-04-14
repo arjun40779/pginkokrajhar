@@ -16,11 +16,16 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useBookingValidation } from '@/lib/hooks/useAvailability';
 import { formatRoomAvailabilityLabel } from '@/lib/rooms/availability';
+import PersonalInfoFields from './PersonalInfoFields';
+import FoodPreferenceFields from './FoodPreferenceFields';
+import GuardianDetailsFields from './GuardianDetailsFields';
+import PermanentAddressFields from './PermanentAddressFields';
+import RulesDeclaration from './RulesDeclaration';
+import { validateBookingForm } from './validateBookingForm';
 
 interface RazorpaySuccessResponse {
   razorpay_order_id: string;
@@ -62,7 +67,6 @@ interface PGRoom {
   id: string;
   roomNumber: string;
   roomType: string;
-  floor: number;
   maxOccupancy: number;
   monthlyRent: number;
   securityDeposit: number;
@@ -90,11 +94,16 @@ interface PGDetails {
 interface BookingPageClientProps {
   initialPgId: string | null;
   initialRoomId: string | null;
+  rules: {
+    sections: { heading: string; rules: string[] }[];
+    declaration: string;
+  } | null;
 }
 
 export default function BookingPageClient({
   initialPgId,
   initialRoomId,
+  rules,
 }: Readonly<BookingPageClientProps>) {
   const router = useRouter();
   const pgId = initialPgId;
@@ -111,6 +120,20 @@ export default function BookingPageClient({
     customerEmail: '',
     checkInDate: '',
     notes: '',
+    dateOfBirth: '',
+    schoolCollege: '',
+    foodType: '',
+    foodRestrictions: '',
+    fatherName: '',
+    fatherPhone: '',
+    motherName: '',
+    motherPhone: '',
+    village: '',
+    postOffice: '',
+    pinCode: '',
+    district: '',
+    addressState: '',
+    declarationAccepted: false,
   });
 
   const { validation, isLoading: validationLoading } = useBookingValidation(
@@ -214,13 +237,9 @@ export default function BookingPageClient({
       return;
     }
 
-    if (!formData.checkInDate) {
-      toast.error('Please select a check-in date');
-      return;
-    }
-
-    if (!formData.customerName || !formData.customerPhone) {
-      toast.error('Please fill in all required fields');
+    const validationError = validateBookingForm(formData, Boolean(rules));
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -301,6 +320,20 @@ export default function BookingPageClient({
                   roomId: roomId || undefined,
                   checkInDate: new Date(formData.checkInDate).toISOString(),
                   notes: formData.notes,
+                  dateOfBirth: formData.dateOfBirth,
+                  schoolCollege: formData.schoolCollege,
+                  foodType: formData.foodType,
+                  foodRestrictions: formData.foodRestrictions || undefined,
+                  fatherName: formData.fatherName,
+                  fatherPhone: formData.fatherPhone,
+                  motherName: formData.motherName,
+                  motherPhone: formData.motherPhone || undefined,
+                  village: formData.village,
+                  postOffice: formData.postOffice,
+                  pinCode: formData.pinCode,
+                  district: formData.district,
+                  addressState: formData.addressState,
+                  declarationAccepted: formData.declarationAccepted,
                   razorpayOrderId: paymentResponse.razorpay_order_id,
                   razorpayPaymentId: paymentResponse.razorpay_payment_id,
                   razorpaySignature: paymentResponse.razorpay_signature,
@@ -408,80 +441,79 @@ export default function BookingPageClient({
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePaymentCheckout} className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Personal Information
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <Label htmlFor="customerName" className="mb-1">
-                          Full Name
-                        </Label>
-                        <Input
-                          id="customerName"
-                          value={formData.customerName}
-                          onChange={(event) =>
-                            setFormData((current) => ({
-                              ...current,
-                              customerName: event.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="customerPhone" className="mb-1">
-                          Phone Number
-                        </Label>
-                        <Input
-                          id="customerPhone"
-                          value={formData.customerPhone}
-                          onChange={(event) =>
-                            setFormData((current) => ({
-                              ...current,
-                              customerPhone: event.target.value,
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
+                  <PersonalInfoFields
+                    data={{
+                      customerName: formData.customerName,
+                      customerPhone: formData.customerPhone,
+                      customerEmail: formData.customerEmail,
+                      dateOfBirth: formData.dateOfBirth,
+                      schoolCollege: formData.schoolCollege,
+                      checkInDate: formData.checkInDate,
+                    }}
+                    onChange={(partial) =>
+                      setFormData((current) => ({ ...current, ...partial }))
+                    }
+                  />
 
-                    <div>
-                      <Label htmlFor="customerEmail" className="mb-1">
-                        Email Address
-                      </Label>
-                      <Input
-                        id="customerEmail"
-                        type="email"
-                        value={formData.customerEmail}
-                        onChange={(event) =>
+                  <hr className="border-gray-200" />
+
+                  <FoodPreferenceFields
+                    data={{
+                      foodType: formData.foodType,
+                      foodRestrictions: formData.foodRestrictions,
+                    }}
+                    onChange={(partial) =>
+                      setFormData((current) => ({ ...current, ...partial }))
+                    }
+                  />
+
+                  <hr className="border-gray-200" />
+
+                  <GuardianDetailsFields
+                    data={{
+                      fatherName: formData.fatherName,
+                      fatherPhone: formData.fatherPhone,
+                      motherName: formData.motherName,
+                      motherPhone: formData.motherPhone,
+                    }}
+                    onChange={(partial) =>
+                      setFormData((current) => ({ ...current, ...partial }))
+                    }
+                  />
+
+                  <hr className="border-gray-200" />
+
+                  <PermanentAddressFields
+                    data={{
+                      village: formData.village,
+                      postOffice: formData.postOffice,
+                      pinCode: formData.pinCode,
+                      district: formData.district,
+                      addressState: formData.addressState,
+                    }}
+                    onChange={(partial) =>
+                      setFormData((current) => ({ ...current, ...partial }))
+                    }
+                  />
+
+                  {rules ? (
+                    <>
+                      <hr className="border-gray-200" />
+                      <RulesDeclaration
+                        sections={rules.sections}
+                        declaration={rules.declaration}
+                        accepted={formData.declarationAccepted}
+                        onAcceptChange={(accepted) =>
                           setFormData((current) => ({
                             ...current,
-                            customerEmail: event.target.value,
+                            declarationAccepted: accepted,
                           }))
                         }
                       />
-                    </div>
-                  </div>
+                    </>
+                  ) : null}
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Move-in Date
-                    </h3>
-                    <Input
-                      type="date"
-                      value={formData.checkInDate}
-                      onChange={(event) =>
-                        setFormData((current) => ({
-                          ...current,
-                          checkInDate: event.target.value,
-                        }))
-                      }
-                      min={new Date().toISOString().split('T')[0]}
-                      required
-                    />
-                  </div>
+                  <hr className="border-gray-200" />
 
                   <div>
                     <Label htmlFor="notes" className="mb-1">

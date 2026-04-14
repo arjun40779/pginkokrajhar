@@ -15,6 +15,7 @@ import { roomPricingIncludesSection } from './document/roomPricingIncludesSectio
 import { roomSchema } from './document/roomSchema';
 import { pgsHeroSection } from './document/pgsHeroSection';
 import { pgGridSection } from './document/pgGridSection';
+import { rulesRegulationsSchema } from './document/rulesRegulationsSchema';
 
 export const schemaTypes = [
   // Document types
@@ -35,6 +36,7 @@ export const schemaTypes = [
   roomSchema,
   pgsHeroSection,
   pgGridSection,
+  rulesRegulationsSchema,
   // Object types
 ];
 

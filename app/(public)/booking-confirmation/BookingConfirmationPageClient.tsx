@@ -44,7 +44,6 @@ interface Booking {
     id: string;
     roomNumber: string;
     roomType: string;
-    floor: number;
   };
 }
 
@@ -284,7 +283,6 @@ export default function BookingConfirmationPageClient({
                     </div>
                     <div className="text-sm text-gray-600">
                       <p>Type: {booking.room.roomType}</p>
-                      <p>Floor: {booking.room.floor}</p>
                     </div>
                   </div>
                 ) : null}
