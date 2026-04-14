@@ -220,7 +220,7 @@ export const pgDetailBySlugQuery = `
       available,
       description
     },
-    heroImage: heroImage[0] {
+    heroImage {
       asset-> {
         _id,
         url,
@@ -304,7 +304,7 @@ export const featuredPGsQuery = `
     startingPrice,
     totalRooms,
     availableRooms,
-    heroImage: heroImage[0] {
+    heroImage {
       asset-> {
         _id,
         url,
