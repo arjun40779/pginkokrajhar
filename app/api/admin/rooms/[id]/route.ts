@@ -20,7 +20,6 @@ const roomUpdateSchema = z.object({
     .int()
     .positive('Max occupancy must be positive')
     .optional(),
-  floor: z.number().int('Floor must be a number').optional(),
 
   // roomSize has been removed as it is no longer needed
 
@@ -37,7 +36,6 @@ const roomUpdateSchema = z.object({
     .min(0, 'Security deposit cannot be negative')
     .optional(),
   maintenanceCharges: z.number().optional(),
-  electricityIncluded: z.boolean().optional(),
 
   // Availability
   availabilityStatus: z

@@ -135,7 +135,6 @@ async function syncRoomToSanity(roomId: string, action: 'create' | 'update') {
       roomType: room.roomType,
       maxOccupancy: room.maxOccupancy,
       currentOccupancy: room.currentOccupancy,
-      floor: room.floor,
       roomSize: room.roomSize,
       hasBalcony: room.hasBalcony,
       hasAttachedBath: room.hasAttachedBath,
@@ -145,7 +144,6 @@ async function syncRoomToSanity(roomId: string, action: 'create' | 'update') {
       monthlyRent: Number(room.monthlyRent),
       securityDeposit: Number(room.securityDeposit),
       maintenanceCharges: Number(room.maintenanceCharges),
-      electricityIncluded: room.electricityIncluded,
       availabilityStatus: room.availabilityStatus,
       availableFrom: room.availableFrom?.toISOString(),
       pgReference: {

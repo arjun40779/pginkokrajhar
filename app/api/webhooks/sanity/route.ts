@@ -164,14 +164,12 @@ interface RoomDocument {
   isActive: boolean;
   roomType: 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORMITORY';
   maxOccupancy: number;
-  floor: number;
   roomSize?: number;
   hasBalcony: boolean;
   hasAttachedBath: boolean;
   hasAC: boolean;
   hasFan: boolean;
   windowDirection?: string;
-  electricityIncluded: boolean;
   pgId?: string;
   pgReference?: {
     _ref: string;
@@ -329,14 +327,12 @@ async function syncRoomToDatabase(
       isActive: document.isActive !== false,
       roomType: document.roomType,
       maxOccupancy: document.maxOccupancy,
-      floor: document.floor,
       roomSize: document.roomSize || null,
       hasBalcony: document.hasBalcony || false,
       hasAttachedBath: document.hasAttachedBath || false,
       hasAC: document.hasAC || false,
       hasFan: document.hasFan !== false,
       windowDirection: document.windowDirection || null,
-      electricityIncluded: document.electricityIncluded !== false,
       pgId: pgId,
       featured: document.featured || false,
       // Default values - these will be managed in the admin panel

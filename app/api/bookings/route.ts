@@ -37,6 +37,25 @@ const bookingCreateSchema = z.object({
       message: 'Valid check-out date required if provided',
     }),
   notes: z.string().optional(),
+  // Admission form fields
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  schoolCollege: z.string().min(1, 'School/College name is required'),
+  foodType: z.enum(['VEG', 'NON_VEG'], {
+    required_error: 'Food type is required',
+  }),
+  foodRestrictions: z.string().optional(),
+  fatherName: z.string().min(1, "Father's name is required"),
+  fatherPhone: z.string().min(10, "Valid father's phone number is required"),
+  motherName: z.string().min(1, "Mother's name is required"),
+  motherPhone: z.string().optional(),
+  village: z.string().min(1, 'Village/Town is required'),
+  postOffice: z.string().min(1, 'Post Office is required'),
+  pinCode: z.string().regex(/^\d{6}$/, 'PIN code must be 6 digits'),
+  district: z.string().min(1, 'District is required'),
+  addressState: z.string().min(1, 'State is required'),
+  declarationAccepted: z
+    .boolean()
+    .refine((v) => v === true, 'Declaration must be accepted'),
 });
 
 async function resolveBookingRoomDetails(roomId: string | undefined) {
@@ -168,6 +187,23 @@ export async function POST(request: NextRequest) {
         paidAmount: 0,
         status: 'PENDING',
         notes: bookingNotes,
+        // Admission form fields
+        dateOfBirth: validatedData.dateOfBirth
+          ? new Date(validatedData.dateOfBirth)
+          : null,
+        schoolCollege: validatedData.schoolCollege || null,
+        foodType: validatedData.foodType || null,
+        foodRestrictions: validatedData.foodRestrictions || null,
+        fatherName: validatedData.fatherName || null,
+        fatherPhone: validatedData.fatherPhone || null,
+        motherName: validatedData.motherName || null,
+        motherPhone: validatedData.motherPhone || null,
+        village: validatedData.village || null,
+        postOffice: validatedData.postOffice || null,
+        pinCode: validatedData.pinCode || null,
+        district: validatedData.district || null,
+        addressState: validatedData.addressState || null,
+        declarationAccepted: validatedData.declarationAccepted ?? false,
       },
     });
 
@@ -189,7 +225,6 @@ export async function POST(request: NextRequest) {
             id: true,
             roomNumber: true,
             roomType: true,
-            floor: true,
           },
         },
       },
