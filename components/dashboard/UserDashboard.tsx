@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
   Card,
@@ -67,6 +67,7 @@ interface PaymentData {
 
 export default function UserDashboard() {
   const { user, userProfile } = useAuth();
+
   const [tenant, setTenant] = useState<TenantData | null>(null);
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [payments, setPayments] = useState<PaymentData[]>([]);
@@ -75,6 +76,9 @@ export default function UserDashboard() {
     nextDueDate: null as Date | null,
     monthlyRent: 0,
   });
+  const [data, setData] = useState([]);
+
+  const filteredData = useMemo(() => {}, [sortBy, search]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -329,3 +333,4 @@ export default function UserDashboard() {
     </div>
   );
 }
+
